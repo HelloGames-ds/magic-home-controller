@@ -14,10 +14,6 @@
   <b>Версия 1.0</b>
 </p>
 
-<p align="center">
-  <a href="https://github.com/HelloGames-ds/magic-home-controller">🔗 GitHub: HelloGames-ds/magic-home-controller</a>
-</p>
-
 ---
 
 Нативный контроллер RGB-ленты и ламп **Magic Home / Flux LED** для Windows, написанный на C++17 с использованием Qt 6 Widgets и Qt Network (TCP/UDP).
