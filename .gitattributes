@@ -1,0 +1,5 @@
+* text=auto
+*.qm binary
+*.qm.lzma binary
+*.tsl text eol=lf
+
