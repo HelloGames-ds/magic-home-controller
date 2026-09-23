@@ -41,16 +41,20 @@
 
 ## Screenshots
 
-<p align="center">
-  <img src="screenshots/en/main_en.png" width="300" alt="Main screen">
-  <img src="screenshots/en/effects_en.png" width="300" alt="Effects">
-  <img src="screenshots/en/settings_en.png" width="300" alt="Settings">
-</p>
+<table align="center">
+  <tr>
+    <td valign="top"><img src="screenshots/en/main_en.png" width="280" alt="Main screen"></td>
+    <td valign="top"><img src="screenshots/en/effects_en.png" width="280" alt="Effects"></td>
+    <td valign="top"><img src="screenshots/en/settings_en.png" width="280" alt="Settings"></td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="screenshots/en/ambi_main_en.png" width="300" alt="Ambilight">
-  <img src="screenshots/en/ambi_edit_en.png" width="620" alt="Ambilight editor">
-</p>
+<table align="center">
+  <tr>
+    <td valign="top"><img src="screenshots/en/ambi_main_en.png" width="280" alt="Ambilight"></td>
+    <td valign="top"><img src="screenshots/en/ambi_edit_en.png" width="580" alt="Ambilight editor"></td>
+  </tr>
+</table>
 
 <p align="center">
   <img src="screenshots/en/tray_rgb_en.png" height="280" alt="Tray">

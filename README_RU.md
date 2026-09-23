@@ -41,16 +41,20 @@
 
 ## Скриншоты
 
-<p align="center">
-  <img src="screenshots/ru/main_screen_ru.png" width="300" alt="Главный экран">
-  <img src="screenshots/ru/effect_ru.png" width="300" alt="Эффекты">
-  <img src="screenshots/ru/settings_ru.png" width="300" alt="Настройки">
-</p>
+<table align="center">
+  <tr>
+    <td valign="top"><img src="screenshots/ru/main_screen_ru.png" width="280" alt="Главный экран"></td>
+    <td valign="top"><img src="screenshots/ru/effect_ru.png" width="280" alt="Эффекты"></td>
+    <td valign="top"><img src="screenshots/ru/settings_ru.png" width="280" alt="Настройки"></td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="screenshots/ru/ambi_main_ru.png" width="300" alt="Ambilight">
-  <img src="screenshots/ru/ambi_edit_ru.png" width="620" alt="Редактор Ambilight">
-</p>
+<table align="center">
+  <tr>
+    <td valign="top"><img src="screenshots/ru/ambi_main_ru.png" width="280" alt="Ambilight"></td>
+    <td valign="top"><img src="screenshots/ru/ambi_edit_ru.png" width="580" alt="Редактор Ambilight"></td>
+  </tr>
+</table>
 
 <p align="center">
   <img src="screenshots/ru/tray_rgb_ru.png" height="280" alt="Трей">
