@@ -41,13 +41,21 @@
 
 ## Скриншоты
 
-| Главный экран | Эффекты | Ambilight |
-| :-: | :-: | :-: |
-| ![Главный экран](screenshots/ru/main_screen_ru.png) | ![Эффекты](screenshots/ru/effect_ru.png) | ![Ambilight](screenshots/ru/ambi_main_ru.png) |
+<p align="center">
+  <img src="screenshots/ru/main_screen_ru.png" width="300" alt="Главный экран">
+  <img src="screenshots/ru/effect_ru.png" width="300" alt="Эффекты">
+  <img src="screenshots/ru/settings_ru.png" width="300" alt="Настройки">
+</p>
 
-| Редактор Ambilight | Настройки | Трей |
-| :-: | :-: | :-: |
-| ![Редактор Ambilight](screenshots/ru/ambi_edit_ru.png) | ![Настройки](screenshots/ru/settings_ru.png) | ![Трей](screenshots/ru/tray_ru.png) |
+<p align="center">
+  <img src="screenshots/ru/ambi_main_ru.png" width="300" alt="Ambilight">
+  <img src="screenshots/ru/ambi_edit_ru.png" width="620" alt="Редактор Ambilight">
+</p>
+
+<p align="center">
+  <img src="screenshots/ru/tray_rgb_ru.png" height="280" alt="Трей">
+  <img src="screenshots/ru/tray_ru.png" height="280" alt="Выбор цвета из трея">
+</p>
 
 ---
 

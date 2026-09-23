@@ -41,13 +41,21 @@
 
 ## Screenshots
 
-| Main screen | Effects | Ambilight |
-| :-: | :-: | :-: |
-| ![Main screen](screenshots/en/main_en.png) | ![Effects](screenshots/en/effects_en.png) | ![Ambilight](screenshots/en/ambi_main_en.png) |
+<p align="center">
+  <img src="screenshots/en/main_en.png" width="300" alt="Main screen">
+  <img src="screenshots/en/effects_en.png" width="300" alt="Effects">
+  <img src="screenshots/en/settings_en.png" width="300" alt="Settings">
+</p>
 
-| Ambilight editor | Settings | Tray |
-| :-: | :-: | :-: |
-| ![Ambilight editor](screenshots/en/ambi_edit_en.png) | ![Settings](screenshots/en/settings_en.png) | ![Tray](screenshots/en/tray_en.png) |
+<p align="center">
+  <img src="screenshots/en/ambi_main_en.png" width="300" alt="Ambilight">
+  <img src="screenshots/en/ambi_edit_en.png" width="620" alt="Ambilight editor">
+</p>
+
+<p align="center">
+  <img src="screenshots/en/tray_rgb_en.png" height="280" alt="Tray">
+  <img src="screenshots/en/tray_en.png" height="280" alt="Tray color picker">
+</p>
 
 ---
 
