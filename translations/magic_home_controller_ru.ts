@@ -691,6 +691,11 @@
         <translation>Время перехода:</translation>
     </message>
     <message>
+        <location filename="../src/MainWindow.cpp" line="168"/>
+        <source>Instant color response</source>
+        <translation>Мгновенная реакция на цвет</translation>
+    </message>
+    <message>
         <location filename="../src/MainWindow.cpp" line="169"/>
         <source>Logging</source>
         <translation>Логирование</translation>
@@ -936,17 +941,17 @@ Capture: %7</source>
 <context>
     <name>elkbledom::SettingsStore</name>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="230"/>
+        <location filename="../src/SettingsStore.cpp" line="232"/>
         <source>Failed to save settings: %1</source>
         <translation>Не удалось сохранить настройки: %1</translation>
     </message>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="251"/>
+        <location filename="../src/SettingsStore.cpp" line="253"/>
         <source>Failed to change startup entry in HKCU</source>
         <translation>Не удалось изменить автозапуск в HKCU</translation>
     </message>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="272"/>
+        <location filename="../src/SettingsStore.cpp" line="274"/>
         <source>Startup for all users (HKLM) could not be removed - administrator rights are required.</source>
         <translation>Автозапуск для всех пользователей (HKLM) не удалён — нужны права администратора.</translation>
     </message>

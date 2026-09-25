@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(MagicHomeController
-    VERSION 1.0
+    VERSION 1.1
     DESCRIPTION "Magic Home LED Controller"
     LANGUAGES CXX
 )
@@ -67,6 +67,7 @@ target_link_libraries(MagicHomeController PRIVATE
 
 target_compile_definitions(MagicHomeController PRIVATE
     QT_NO_KEYWORDS
+    APP_VERSION="${PROJECT_VERSION}"
 )
 
 if(MSVC)

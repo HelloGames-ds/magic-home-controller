@@ -3,6 +3,7 @@ name: Windows build
 on:
   push:
     branches: [main, master]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -28,13 +29,58 @@ jobs:
       - name: Deploy Qt
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force package/translations | Out-Null
+          New-Item -ItemType Directory -Force package | Out-Null
           Copy-Item build/Release/Magic-Home-Controller.exe package/Magic-Home-Controller.exe
           windeployqt --release --no-translations --compiler-runtime package/Magic-Home-Controller.exe
-          Copy-Item translations/magic_home_controller_ru.qm package/translations/
 
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
           name: Magic-Home-Controller-windows-x64
           path: package/
+
+      - name: Build installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = "$env:GITHUB_REF_NAME" -replace '^v', ''
+          New-Item -ItemType Directory -Force dist-cpp | Out-Null
+          Copy-Item package/* dist-cpp -Recurse -Force
+          New-Item -ItemType Directory -Force dist-cpp/translations | Out-Null
+          Copy-Item translations/magic_home_controller_ru.qm dist-cpp/translations/magic_home_controller_ru.qm
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup 6 not found: $iscc" }
+          & $iscc "/DAppVersion=$version" installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+
+      - name: Upload installer artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Magic-Home-Controller-installer
+          path: installer-output/
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: Magic-Home-Controller-installer
+          path: installer-output
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag -replace '^v', ''
+          $assets = @(Get-ChildItem installer-output/*.exe | ForEach-Object { $_.FullName })
+          if ($assets.Count -eq 0) { throw "No installer assets found" }
+          gh release create $tag @assets --verify-tag --generate-notes --title "Magic Home Controller $version"

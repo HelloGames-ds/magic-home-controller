@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     QApplication application(argc, argv);
     QCoreApplication::setApplicationName(
         QString::fromLatin1(elkbledom::config::ApplicationName));
-    QCoreApplication::setApplicationVersion(QStringLiteral("1.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral(APP_VERSION));
     QCoreApplication::setOrganizationName(
         QString::fromLatin1(elkbledom::config::OrganizationName));
 

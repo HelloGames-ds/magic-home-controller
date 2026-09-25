@@ -165,7 +165,7 @@ void ColorWheel::handlePosition(const QPointF& position)
     }
 
     const QColor color = rgb();
-    if (!emitClock_.isValid() || emitClock_.elapsed() >= 33) {
+    if (!emitThrottle_ || !emitClock_.isValid() || emitClock_.elapsed() >= 33) {
         emitClock_.restart();
         Q_EMIT colorChanged(color.red(), color.green(), color.blue());
     }

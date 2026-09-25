@@ -134,6 +134,7 @@ private:
     QSlider* netDedupSlider_ = nullptr;
     QLabel* netDedupValue_ = nullptr;
     QCheckBox* smoothingCheck_ = nullptr;
+    QCheckBox* instantColorCheck_ = nullptr;
     QSlider* tauSlider_ = nullptr;
     QLabel* tauValue_ = nullptr;
     QCheckBox* loggingCheck_ = nullptr;

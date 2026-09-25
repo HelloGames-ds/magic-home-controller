@@ -9,8 +9,12 @@ if not exist "%ISCC%" (
     exit /b 1
 )
 
-if exist installer-output rmdir /s /q installer-output
-"%ISCC%" installer.iss || exit /b 1
+set "APPVER=%~1"
+if not defined APPVER set "APPVER=1.1"
+set "APPVER=%APPVER:v=%"
 
-echo Installer: %CD%\installer-output\Magic-Home-Controller-Setup-1.0-x64.exe
+if exist installer-output rmdir /s /q installer-output
+"%ISCC%" /DAppVersion=%APPVER% installer.iss || exit /b 1
+
+for %%f in (installer-output\*.exe) do echo Installer: %CD%\%%f
 endlocal

@@ -52,6 +52,7 @@ struct AppSettings
     double netDedup = 0.5;
     bool smoothEnabled = true;
     int smoothTau = 200;
+    bool instantColor = false;
     bool loggingEnabled = true;
     bool autostart = false;
     bool startMinimized = false;

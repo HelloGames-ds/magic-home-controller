@@ -1,13 +1,16 @@
 [Setup]
 AppId={{D91DC516-9175-4D87-9AB2-D42315583581}
 AppName=Magic Home Controller
-AppVersion=1.0
+#ifndef AppVersion
+  #define AppVersion 1.1
+#endif
+AppVersion={#AppVersion}
 AppPublisher=Magic Home Controller contributors
 DefaultDirName={autopf}\Magic Home Controller
 DefaultGroupName=Magic Home Controller
 DisableProgramGroupPage=yes
 OutputDir=installer-output
-OutputBaseFilename=Magic-Home-Controller-Setup-1.0-x64
+OutputBaseFilename=Magic-Home-Controller-Setup-{#AppVersion}-x64
 SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\Magic-Home-Controller.exe
 Compression=lzma2/ultra64

@@ -19,6 +19,7 @@ public:
     void setRgb(int red, int green, int blue);
     void setVisualRgb(int red, int green, int blue);
     void setVisualFollowsInput(bool enabled) noexcept { visualFollowsInput_ = enabled; }
+    void setEmitThrottleEnabled(bool enabled) noexcept { emitThrottle_ = enabled; }
     QColor rgb() const;
 
 Q_SIGNALS:
@@ -51,6 +52,7 @@ private:
     QElapsedTimer emitClock_;
     bool dragging_ = false;
     bool visualFollowsInput_ = false;
+    bool emitThrottle_ = true;
 };
 
 } // namespace elkbledom

@@ -170,6 +170,7 @@ AppSettings SettingsStore::load() const
     value.powerOffOnShutdown = settings_->value(QStringLiteral("power_off_on_shutdown"), false).toBool();
     value.smoothEnabled = settings_->value(QStringLiteral("smooth_enabled"), true).toBool();
     value.smoothTau = settings_->value(QStringLiteral("smooth_tau"), 200).toInt();
+    value.instantColor = settings_->value(QStringLiteral("instant_color"), false).toBool();
     value.loggingEnabled = settings_->value(QStringLiteral("logging_enabled"), true).toBool();
     value.autostart = settings_->value(QStringLiteral("autostart"), false).toBool();
     value.startMinimized = settings_->value(QStringLiteral("start_minimized"), false).toBool();
@@ -218,6 +219,7 @@ bool SettingsStore::save(const AppSettings& input)
     settings_->setValue(QStringLiteral("power_off_on_shutdown"), value.powerOffOnShutdown);
     settings_->setValue(QStringLiteral("smooth_enabled"), value.smoothEnabled);
     settings_->setValue(QStringLiteral("smooth_tau"), value.smoothTau);
+    settings_->setValue(QStringLiteral("instant_color"), value.instantColor);
     settings_->setValue(QStringLiteral("logging_enabled"), value.loggingEnabled);
     settings_->setValue(QStringLiteral("autostart"), value.autostart);
     settings_->setValue(QStringLiteral("start_minimized"), value.startMinimized);
