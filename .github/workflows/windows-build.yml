@@ -83,4 +83,4 @@ jobs:
           $version = $tag -replace '^v', ''
           $assets = @(Get-ChildItem installer-output/*.exe | ForEach-Object { $_.FullName })
           if ($assets.Count -eq 0) { throw "No installer assets found" }
-          gh release create $tag @assets --verify-tag --generate-notes --title "Magic Home Controller $version"
+          gh release create $tag @assets --generate-notes --title "Magic Home Controller $version"
