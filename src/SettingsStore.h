@@ -46,6 +46,7 @@ struct AppSettings
     bool restorePower = true;
     bool lastPowerOn = false;
     bool powerOffOnExit = false;
+    bool powerOffOnShutdown = false;
 
     double netInterval = 0.0;
     double netDedup = 0.5;

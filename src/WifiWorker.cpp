@@ -158,6 +158,34 @@ void WifiWorker::send(const QByteArray& command)
     processQueue();
 }
 
+void WifiWorker::sendUrgent(const QByteArray& command)
+{
+    if (command.isEmpty()) {
+        return;
+    }
+
+    pending_.clear();
+    queueTimer_->stop();
+    if (!running_ || !connected_ || !socket_) {
+        return;
+    }
+
+    const qint64 written = socket_->write(command);
+    if (written != command.size()) {
+        Q_EMIT statusChanged(tr("TCP write error, reconnecting…"));
+        setConnected(false);
+        resetSocket();
+        scheduleReconnect(0);
+        return;
+    }
+
+    lastWrittenCommand_ = command;
+    lastWrittenAtMs_ = nowMs();
+    lastSuccessfulWriteAtMs_ = lastWrittenAtMs_;
+    socket_->flush();
+    socket_->waitForBytesWritten(500);
+}
+
 void WifiWorker::queryState()
 {
     if (connected_) {
@@ -379,6 +407,14 @@ void WifiManager::setDeduplicationWindow(double seconds)
 void WifiManager::send(const QByteArray& command)
 {
     Q_EMIT sendRequested(command);
+}
+
+void WifiManager::sendUrgent(const QByteArray& command)
+{
+    if (thread_.isRunning() && worker_) {
+        QMetaObject::invokeMethod(worker_, &WifiWorker::sendUrgent, Qt::BlockingQueuedConnection,
+                                  command);
+    }
 }
 
 void WifiManager::sendBlocking(const QByteArray& command)

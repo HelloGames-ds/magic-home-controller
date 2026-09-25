@@ -30,6 +30,7 @@ public Q_SLOTS:
     void setMinimumInterval(double seconds);
     void setDeduplicationWindow(double seconds);
     void send(const QByteArray& command);
+    void sendUrgent(const QByteArray& command);
     void queryState();
 
 Q_SIGNALS:
@@ -81,6 +82,7 @@ public:
     void setMinimumInterval(double seconds);
     void setDeduplicationWindow(double seconds);
     void send(const QByteArray& command);
+    void sendUrgent(const QByteArray& command);
     void sendBlocking(const QByteArray& command);
     void queryState();
 

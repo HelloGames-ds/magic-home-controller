@@ -28,6 +28,7 @@ class ColorWheel;
 class DeviceScanner;
 class EffectEngine;
 class LogWindow;
+class SessionShutdownFilter;
 class SettingsStore;
 class TrayPopup;
 class WifiManager;
@@ -57,6 +58,8 @@ private:
     void setEffect(const QString& effect);
     void applyEffectState();
     void setPower(bool enabled);
+    void setPowerOffOnShutdown(bool enabled);
+    void sendShutdownPowerOff();
     void submitGeneratedColor(int red, int green, int blue);
     void onSmoothedColor(int red, int green, int blue);
     void setStaticColor(int red, int green, int blue);
@@ -84,6 +87,7 @@ private:
     TrayPopup* popup_ = nullptr;
     LogWindow* logWindow_ = nullptr;
     AmbiEditor* ambiEditor_ = nullptr;
+    SessionShutdownFilter* shutdownFilter_ = nullptr;
     AppSettings settings_;
 
     QTabWidget* tabs_ = nullptr;
@@ -141,6 +145,8 @@ private:
     QCheckBox* keepaliveCheck_ = nullptr;
     QCheckBox* restorePowerCheck_ = nullptr;
     QCheckBox* powerOffOnExitCheck_ = nullptr;
+    QCheckBox* powerOffOnShutdownCheck_ = nullptr;
+    QAction* powerOffOnShutdownAction_ = nullptr;
     QComboBox* languageCombo_ = nullptr;
 
     QSystemTrayIcon* tray_ = nullptr;

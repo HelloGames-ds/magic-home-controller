@@ -167,6 +167,7 @@ AppSettings SettingsStore::load() const
     value.restorePower = settings_->value(QStringLiteral("restore_power"), true).toBool();
     value.lastPowerOn = settings_->value(QStringLiteral("power_on"), false).toBool();
     value.powerOffOnExit = settings_->value(QStringLiteral("power_off_on_exit"), false).toBool();
+    value.powerOffOnShutdown = settings_->value(QStringLiteral("power_off_on_shutdown"), false).toBool();
     value.smoothEnabled = settings_->value(QStringLiteral("smooth_enabled"), true).toBool();
     value.smoothTau = settings_->value(QStringLiteral("smooth_tau"), 200).toInt();
     value.loggingEnabled = settings_->value(QStringLiteral("logging_enabled"), true).toBool();
@@ -214,6 +215,7 @@ bool SettingsStore::save(const AppSettings& input)
     settings_->setValue(QStringLiteral("restore_power"), value.restorePower);
     settings_->setValue(QStringLiteral("power_on"), value.lastPowerOn);
     settings_->setValue(QStringLiteral("power_off_on_exit"), value.powerOffOnExit);
+    settings_->setValue(QStringLiteral("power_off_on_shutdown"), value.powerOffOnShutdown);
     settings_->setValue(QStringLiteral("smooth_enabled"), value.smoothEnabled);
     settings_->setValue(QStringLiteral("smooth_tau"), value.smoothTau);
     settings_->setValue(QStringLiteral("logging_enabled"), value.loggingEnabled);

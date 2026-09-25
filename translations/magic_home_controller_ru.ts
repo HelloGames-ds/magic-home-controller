@@ -493,366 +493,381 @@
 <context>
     <name>elkbledom::MainWindow</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="70"/>
+        <location filename="../src/MainWindow.cpp" line="71"/>
         <source>Control</source>
         <translation>Управление</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="71"/>
+        <location filename="../src/MainWindow.cpp" line="72"/>
         <source>Effects</source>
         <translation>Эффекты</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="71"/>
-        <location filename="../src/MainWindow.cpp" line="107"/>
+        <location filename="../src/MainWindow.cpp" line="72"/>
+        <location filename="../src/MainWindow.cpp" line="112"/>
         <source>Ambilight</source>
         <translation>Ambilight</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="72"/>
+        <location filename="../src/MainWindow.cpp" line="73"/>
         <source>Settings</source>
         <translation>Настройки</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="73"/>
+        <location filename="../src/MainWindow.cpp" line="74"/>
         <source>Ready</source>
         <translation>Готово</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="106"/>
+        <location filename="../src/MainWindow.cpp" line="111"/>
         <source>Brightness</source>
         <translation>Яркость</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="107"/>
+        <location filename="../src/MainWindow.cpp" line="112"/>
         <source>Source</source>
         <translation>Источник</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="107"/>
+        <location filename="../src/MainWindow.cpp" line="112"/>
         <source>Effect</source>
         <translation>Эффект</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="108"/>
+        <location filename="../src/MainWindow.cpp" line="113"/>
         <source>Smoothness</source>
         <translation>Плавность</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="108"/>
+        <location filename="../src/MainWindow.cpp" line="113"/>
         <source>▶  Smoothness test</source>
         <translation>▶  Тест перехода</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="109"/>
+        <location filename="../src/MainWindow.cpp" line="114"/>
         <source>Turn on</source>
         <translation>Включить</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="109"/>
-        <location filename="../src/MainWindow.cpp" line="137"/>
+        <location filename="../src/MainWindow.cpp" line="114"/>
+        <location filename="../src/MainWindow.cpp" line="142"/>
         <source>Turn off</source>
         <translation>Выключить</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="116"/>
+        <location filename="../src/MainWindow.cpp" line="121"/>
         <source>Effect mode</source>
         <translation>Режим эффекта</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="117"/>
+        <location filename="../src/MainWindow.cpp" line="122"/>
         <source>Effect:</source>
         <translation>Эффект:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="120"/>
+        <location filename="../src/MainWindow.cpp" line="125"/>
         <source>Speed:</source>
         <translation>Скорость:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="120"/>
+        <location filename="../src/MainWindow.cpp" line="125"/>
         <source>Reverse direction</source>
         <translation>Обратное направление</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="121"/>
+        <location filename="../src/MainWindow.cpp" line="126"/>
         <source>Palette</source>
         <translation>Палитра</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="121"/>
+        <location filename="../src/MainWindow.cpp" line="126"/>
         <source>Color 1 is the main color. Effects use from one to all active colors.</source>
         <translation>Цвет 1 — основной. Эффекты используют от одного до всех активных цветов.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="124"/>
+        <location filename="../src/MainWindow.cpp" line="129"/>
         <source>− Remove</source>
         <translation>− Убрать</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="124"/>
+        <location filename="../src/MainWindow.cpp" line="129"/>
         <source>+ Add</source>
         <translation>+ Добавить</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="125"/>
+        <location filename="../src/MainWindow.cpp" line="130"/>
         <source>Parameters</source>
         <translation>Параметры</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="125"/>
+        <location filename="../src/MainWindow.cpp" line="130"/>
         <source>Intensity:</source>
         <translation>Интенсивность:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="125"/>
+        <location filename="../src/MainWindow.cpp" line="130"/>
         <source>Noise:</source>
         <translation>Шум:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="131"/>
+        <location filename="../src/MainWindow.cpp" line="136"/>
         <source>Monitor</source>
         <translation>Монитор</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="131"/>
+        <location filename="../src/MainWindow.cpp" line="136"/>
         <source>Refresh</source>
         <translation>Обновить</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="132"/>
+        <location filename="../src/MainWindow.cpp" line="137"/>
         <source>Screen capture</source>
         <translation>Захват экрана</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="136"/>
+        <location filename="../src/MainWindow.cpp" line="141"/>
         <source>Open area and parameters editor…</source>
         <translation>Открыть редактор области и параметров…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="137"/>
-        <location filename="../src/MainWindow.cpp" line="199"/>
+        <location filename="../src/MainWindow.cpp" line="142"/>
+        <location filename="../src/MainWindow.cpp" line="204"/>
         <source>Ambilight off</source>
         <translation>Ambilight выключен</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="137"/>
+        <location filename="../src/MainWindow.cpp" line="142"/>
         <source>Turn on Ambilight</source>
         <translation>Включить Ambilight</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="160"/>
+        <location filename="../src/MainWindow.cpp" line="165"/>
         <source>Device</source>
         <translation>Устройство</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="160"/>
+        <location filename="../src/MainWindow.cpp" line="165"/>
         <source>Apply</source>
         <translation>Применить</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="160"/>
+        <location filename="../src/MainWindow.cpp" line="165"/>
         <source>🔍  Find Magic Home devices</source>
         <translation>🔍  Найти Magic Home в сети</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="160"/>
+        <location filename="../src/MainWindow.cpp" line="165"/>
         <source>Use selected</source>
         <translation>Использовать выбранное</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="162"/>
+        <location filename="../src/MainWindow.cpp" line="167"/>
         <source>Wi-Fi (TCP)</source>
         <translation>Wi-Fi (TCP)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="162"/>
+        <location filename="../src/MainWindow.cpp" line="167"/>
         <source>Interval:</source>
         <translation>Интервал:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="162"/>
+        <location filename="../src/MainWindow.cpp" line="167"/>
         <source>Deduplication:</source>
         <translation>Дедупликация:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="163"/>
+        <location filename="../src/MainWindow.cpp" line="168"/>
         <source>Smoothing</source>
         <translation>Сглаживание</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="163"/>
+        <location filename="../src/MainWindow.cpp" line="168"/>
         <source>Enable smooth transitions</source>
         <translation>Включить плавные переходы</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="163"/>
+        <location filename="../src/MainWindow.cpp" line="168"/>
         <source>Transition time:</source>
         <translation>Время перехода:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="164"/>
+        <location filename="../src/MainWindow.cpp" line="169"/>
         <source>Logging</source>
         <translation>Логирование</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="164"/>
+        <location filename="../src/MainWindow.cpp" line="169"/>
         <source>Write log file</source>
         <translation>Записывать журнал</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="164"/>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="169"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Open log</source>
         <translation>Открыть лог</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="164"/>
+        <location filename="../src/MainWindow.cpp" line="169"/>
         <source>Clear buffer</source>
         <translation>Очистить буфер</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="165"/>
+        <location filename="../src/MainWindow.cpp" line="170"/>
         <source>Language</source>
         <translation>Язык</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="165"/>
+        <location filename="../src/MainWindow.cpp" line="170"/>
         <source>Interface language:</source>
         <translation>Язык интерфейса:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Behavior</source>
         <translation>Поведение</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Start with Windows</source>
         <translation>Запускать вместе с Windows</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Start minimized</source>
         <translation>Запускать свёрнутым</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Save settings on exit</source>
         <translation>Сохранять при выходе</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Keepalive for static color</source>
         <translation>Keepalive для статического цвета</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Restore powered-on state on startup</source>
         <translation>Восстанавливать включённое состояние при запуске</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Turn the strip off on exit</source>
         <translation>Выключать ленту при выходе</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="166"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
         <source>Save settings</source>
         <translation>Сохранить настройки</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="177"/>
+        <location filename="../src/MainWindow.cpp" line="171"/>
+        <source>Turn the strip off when Windows shuts down</source>
+        <translation>Выключать ленту при завершении работы Windows</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="182"/>
         <source>Address: %1</source>
         <translation>Адрес: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="177"/>
+        <location filename="../src/MainWindow.cpp" line="182"/>
         <source>Searching for devices…</source>
         <translation>Поиск устройств…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="177"/>
+        <location filename="../src/MainWindow.cpp" line="182"/>
         <source>No devices found</source>
         <translation>Устройства не найдены</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="177"/>
+        <location filename="../src/MainWindow.cpp" line="182"/>
         <source>Scanning finished</source>
         <translation>Сканирование завершено</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="177"/>
+        <location filename="../src/MainWindow.cpp" line="182"/>
         <source>Scan error: %1</source>
         <translation>Ошибка сканирования: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="179"/>
+        <location filename="../src/MainWindow.cpp" line="184"/>
         <source>Wi-Fi: connected</source>
         <translation>Wi-Fi: подключено</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="179"/>
+        <location filename="../src/MainWindow.cpp" line="184"/>
         <source>Wi-Fi: disconnected</source>
         <translation>Wi-Fi: отключено</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="197"/>
+        <location filename="../src/MainWindow.cpp" line="202"/>
         <source>Settings saved</source>
         <translation>Настройки сохранены</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="199"/>
+        <location filename="../src/MainWindow.cpp" line="204"/>
         <source>Ambilight on</source>
         <translation>Ambilight включён</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="199"/>
+        <location filename="../src/MainWindow.cpp" line="204"/>
         <source>Source: Ambilight</source>
         <translation>Источник: Ambilight</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="199"/>
+        <location filename="../src/MainWindow.cpp" line="204"/>
         <source>Source: effects</source>
         <translation>Источник: эффекты</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="204"/>
+        <location filename="../src/MainWindow.cpp" line="209"/>
         <source>Backlight on</source>
         <translation>Подсветка включена</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="204"/>
+        <location filename="../src/MainWindow.cpp" line="209"/>
         <source>Backlight off</source>
         <translation>Подсветка выключена</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="210"/>
+        <source>The strip will be turned off when Windows shuts down</source>
+        <translation>Лента будет выключена при завершении работы Windows</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="210"/>
+        <source>The strip state will be kept when Windows shuts down</source>
+        <translation>Состояние ленты будет сохранено при завершении работы Windows</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="217"/>
         <source>Editing: Color 1 (primary)</source>
         <translation>Редактируется: Цвет 1 (основной)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="210"/>
+        <location filename="../src/MainWindow.cpp" line="217"/>
         <source>Editing: Color %1</source>
         <translation>Редактируется: Цвет %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="210"/>
+        <location filename="../src/MainWindow.cpp" line="217"/>
         <source>Rainbow does not use the palette.</source>
         <translation>Радуга не использует палитру.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="210"/>
+        <location filename="../src/MainWindow.cpp" line="217"/>
         <source>Active colors: %1. Current effect uses: %2.</source>
         <translation>Активных цветов: %1. Текущий эффект использует: %2.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="211"/>
+        <location filename="../src/MainWindow.cpp" line="218"/>
         <source> (primary)</source>
         <translation> (основной)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="212"/>
+        <location filename="../src/MainWindow.cpp" line="219"/>
         <source>Area: %1
 Band: %2% · boost: %3x · smoothing: %4
 Frequency: %5 Hz · combining: %6
@@ -863,52 +878,57 @@ Capture: %7</source>
 Захват: %7</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="214"/>
+        <location filename="../src/MainWindow.cpp" line="221"/>
         <source>Smoothness test finished</source>
         <translation>Тест завершён</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="214"/>
+        <location filename="../src/MainWindow.cpp" line="221"/>
         <source>Smoothness test… (%1/%2)</source>
         <translation>Тест плавности… (%1/%2)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Open window</source>
         <translation>Открыть окно</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>🎨 Quick settings</source>
         <translation>🎨 Быстрые настройки</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Turn backlight on</source>
         <translation>Включить подсветку</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Turn backlight off</source>
         <translation>Выключить подсветку</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>▶ Smoothness test</source>
         <translation>▶ Тест плавности</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Settings…</source>
         <translation>Настройки…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="216"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
         <source>Exit</source>
         <translation>Выход</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="221"/>
+        <location filename="../src/MainWindow.cpp" line="223"/>
+        <source>Turn off when Windows shuts down</source>
+        <translation>Выключать при завершении работы Windows</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="228"/>
         <source>Application minimized to tray</source>
         <translation>Приложение свёрнуто в трей</translation>
     </message>
@@ -916,17 +936,17 @@ Capture: %7</source>
 <context>
     <name>elkbledom::SettingsStore</name>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="228"/>
+        <location filename="../src/SettingsStore.cpp" line="230"/>
         <source>Failed to save settings: %1</source>
         <translation>Не удалось сохранить настройки: %1</translation>
     </message>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="249"/>
+        <location filename="../src/SettingsStore.cpp" line="251"/>
         <source>Failed to change startup entry in HKCU</source>
         <translation>Не удалось изменить автозапуск в HKCU</translation>
     </message>
     <message>
-        <location filename="../src/SettingsStore.cpp" line="270"/>
+        <location filename="../src/SettingsStore.cpp" line="272"/>
         <source>Startup for all users (HKLM) could not be removed - administrator rights are required.</source>
         <translation>Автозапуск для всех пользователей (HKLM) не удалён — нужны права администратора.</translation>
     </message>
@@ -989,7 +1009,7 @@ Capture: %7</source>
     <name>elkbledom::WifiWorker</name>
     <message>
         <location filename="../src/WifiWorker.cpp" line="58"/>
-        <location filename="../src/WifiWorker.cpp" line="201"/>
+        <location filename="../src/WifiWorker.cpp" line="229"/>
         <source>Wi-Fi connected: %1</source>
         <translation>Wi-Fi подключено: %1</translation>
     </message>
@@ -1020,7 +1040,7 @@ Capture: %7</source>
     </message>
     <message>
         <location filename="../src/WifiWorker.cpp" line="93"/>
-        <location filename="../src/WifiWorker.cpp" line="177"/>
+        <location filename="../src/WifiWorker.cpp" line="205"/>
         <source>Invalid IP address: %1</source>
         <translation>Некорректный IP-адрес: %1</translation>
     </message>
@@ -1030,32 +1050,33 @@ Capture: %7</source>
         <translation>Адрес изменён: %1</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="184"/>
+        <location filename="../src/WifiWorker.cpp" line="212"/>
         <source>Connecting to %1:%2…</source>
         <translation>Подключение к %1:%2…</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="214"/>
+        <location filename="../src/WifiWorker.cpp" line="242"/>
         <source>Wi-Fi disconnected. Retrying in 5 s…</source>
         <translation>Wi-Fi отключено. Повтор через 5 с…</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="224"/>
+        <location filename="../src/WifiWorker.cpp" line="252"/>
         <source>unknown error</source>
         <translation>неизвестная ошибка</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="225"/>
+        <location filename="../src/WifiWorker.cpp" line="253"/>
         <source>Wi-Fi unavailable (%1), retrying in 5 s…</source>
         <translation>Wi-Fi недоступно (%1), повтор через 5 с…</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="249"/>
+        <location filename="../src/WifiWorker.cpp" line="175"/>
+        <location filename="../src/WifiWorker.cpp" line="277"/>
         <source>TCP write error, reconnecting…</source>
         <translation>Ошибка записи TCP, переподключение…</translation>
     </message>
     <message>
-        <location filename="../src/WifiWorker.cpp" line="276"/>
+        <location filename="../src/WifiWorker.cpp" line="304"/>
         <source>Wi-Fi: queue not sending, reconnecting…</source>
         <translation>Wi-Fi: очередь не отправляется, переподключение…</translation>
     </message>

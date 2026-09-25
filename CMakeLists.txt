@@ -24,6 +24,8 @@ qt_add_executable(MagicHomeController WIN32
     src/main.cpp
     src/MainWindow.cpp
     src/MainWindow.h
+    src/SessionShutdownFilter.cpp
+    src/SessionShutdownFilter.h
     src/WifiWorker.cpp
     src/WifiWorker.h
     src/ColorWheel.cpp
