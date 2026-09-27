@@ -17,19 +17,21 @@ QTabWidget::pane {
     background-color: #23232b; top: -1px;
 }
 QTabBar::tab {
-    background-color: #23232b; color: #a0a0b0;
-    padding: 10px 16px; margin-right: 4px;
-    border-top-left-radius: 8px; border-top-right-radius: 8px;
-    border: 1px solid #2d2d38; border-bottom: none;
+    background-color: transparent; color: #a0a0b0;
+    padding: 7px 14px; margin-right: 4px;
+    border: none; border-bottom: 2px solid transparent;
 }
 QTabBar::tab:selected {
-    background-color: #7b2cbf; color: #ffffff; border-color: #7b2cbf;
+    /* Активная вкладка как на макете: фиолетовая подчёркивание, а не залитая
+       плашка — так вкладки не перетягивают на себя внимание. */
+    background-color: transparent; color: #c79bff; border-bottom: 2px solid #9d4edd;
+    font-weight: 600;
 }
-QTabBar::tab:hover:!selected { background-color: #2f2f3a; color: #d0d0e0; }
+QTabBar::tab:hover:!selected { color: #d0d0e0; }
 QPushButton {
     background-color: #2b2b35; color: #e0e0e6;
     border: 1px solid #3a3a48; border-radius: 8px;
-    padding: 8px 16px; min-height: 22px;
+    padding: 5px 12px; min-height: 16px;
 }
 QPushButton:hover { background-color: #7b2cbf; border-color: #9d4edd; color: white; }
 QPushButton:pressed { background-color: #5a189a; }
@@ -56,13 +58,13 @@ QSlider::handle:horizontal {
 QSlider::handle:horizontal:hover { background: #9d4edd; border-color: #b070ff; }
 QLineEdit {
     background-color: #2b2b35; border: 1px solid #3a3a48;
-    border-radius: 8px; padding: 7px 12px; color: #e0e0e6;
+    border-radius: 8px; padding: 4px 10px; color: #e0e0e6;
     selection-background-color: #7b2cbf;
 }
 QLineEdit:focus { border-color: #7b2cbf; }
 QComboBox {
     background-color: #2b2b35; border: 1px solid #3a3a48;
-    border-radius: 8px; padding: 6px 10px; color: #e0e0e6; min-height: 22px;
+    border-radius: 8px; padding: 4px 10px; color: #e0e0e6; min-height: 16px;
 }
 QComboBox:hover { border-color: #7b2cbf; }
 QComboBox::drop-down { border: none; width: 20px; }
@@ -75,10 +77,40 @@ QListWidget {
     background-color: #23232b; border: 1px solid #3a3a48;
     border-radius: 8px; padding: 4px; color: #e0e0e6;
 }
-QListWidget::item { padding: 8px 12px; border-radius: 6px; }
-QListWidget::item:selected { background-color: #7b2cbf; color: white; }
-QListWidget::item:hover:!selected { background-color: #2f2f3a; }
+QListWidget::item { padding: 7px 10px; border-radius: 6px; }
+/* Выделенный слой: акцентная полоса слева вместо сплошной фиолетовой заливки —
+   так список остаётся читаемым, а активный слой всё равно виден. */
+QListWidget::item:selected {
+    background-color: #2f2f3a; color: #ffffff;
+    border-left: 3px solid #b070ff;
+}
+QListWidget::item:hover:!selected { background-color: #2a2a34; }
 QLabel[role="title"] { font-size: 20px; font-weight: 800; color: #ffffff; }
+QLabel[role="paneltitle"] { font-size: 17px; font-weight: 700; color: #ffffff; }
+QLabel[role="section"] {
+    color: #b070ff; font-weight: 700; font-size: 12px;
+    letter-spacing: 1px; padding: 6px 0 2px 0;
+}
+QLabel[role="warn"] {
+    color: #f59e0b; background: #2a2318; border: 1px solid #7a5a20;
+    border-radius: 8px; padding: 6px 10px;
+}
+QPushButton[preset="true"], QPushButton[compact="true"] {
+    padding: 6px 8px; min-height: 18px; font-size: 12px; border-radius: 6px;
+}
+QPushButton[preset="true"]:checked {
+    background-color: #7b2cbf; border-color: #9d4edd; color: #ffffff; font-weight: 700;
+}
+/* Пресеты области захвата: иконка схемы над подписью, как в макете. */
+QToolButton[preset="true"] {
+    padding: 6px 4px; border-radius: 8px; color: #d0d0e0; font-size: 12px;
+    border: 1px solid #3a3a48; background-color: #23232b;
+}
+QToolButton[preset="true"]:hover { background-color: #2b2b35; }
+QToolButton[preset="true"]:checked {
+    background-color: #7b2cbf; border-color: #9d4edd; color: #ffffff; font-weight: 700;
+}
+QPushButton[tool="true"] { padding: 4px; min-height: 18px; }
 QLabel[role="status"] { color: #a0a0b0; padding: 4px; }
 QLabel[role="info"] { color: #b0b0c0; padding: 6px 10px; background: #1a1a20; border-radius: 8px; }
 QLabel[role="value"] { color: #b070ff; font-weight: 700; min-width: 50px; }
@@ -93,8 +125,8 @@ QLabel[role="desc"] {
 QLabel[role="dot"] { font-size: 18px; color: #ef4444; }
 QGroupBox {
     background-color: #23232b; border: 1px solid #2d2d38;
-    border-radius: 12px; margin-top: 14px;
-    padding: 14px 12px 12px 12px; font-weight: 700;
+    border-radius: 12px; margin-top: 11px;
+    padding: 8px 10px 9px 10px; font-weight: 700;
 }
 QGroupBox::title {
     subcontrol-origin: margin; left: 14px; padding: 0 8px;
@@ -106,9 +138,9 @@ QMenu { background-color: #23232b; border: 1px solid #3a3a48; border-radius: 8px
 QMenu::item { padding: 8px 18px; border-radius: 6px; color: #e0e0e6; }
 QMenu::item:selected { background-color: #7b2cbf; color: white; }
 QMenu::separator { height: 1px; background: #3a3a48; margin: 4px 8px; }
-QCheckBox { color: #e0e0e6; spacing: 8px; }
+QCheckBox { color: #e0e0e6; spacing: 6px; }
 QCheckBox::indicator {
-    width: 18px; height: 18px; border-radius: 5px;
+    width: 16px; height: 16px; border-radius: 4px;
     border: 1px solid #3a3a48; background: #2b2b35;
 }
 QCheckBox::indicator:checked { background: #7b2cbf; border-color: #9d4edd; }

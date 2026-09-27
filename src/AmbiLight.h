@@ -1,8 +1,11 @@
 #pragma once
 
+#include "CaptureZone.h"
+
 #include <QColor>
 #include <QElapsedTimer>
 #include <QHash>
+#include <QImage>
 #include <QObject>
 #include <QRect>
 #include <QRectF>
@@ -65,6 +68,7 @@ public:
     void setCustomRect(double x, double y, double width, double height);
     void setCustomRect(const QRectF& rect);
     void setCombine(const QString& mode);
+    void setZones(const QVector<CaptureZone>& zones);
 
     QString region() const { return region_; }
     int bandPct() const { return bandPct_; }
@@ -76,6 +80,8 @@ public:
     int screenIndex() const { return screenIndex_; }
     QRectF customRect() const { return customRect_; }
     QString combineMode() const { return combine_; }
+    const QVector<CaptureZone>& zones() const { return zones_; }
+    bool hasZones() const;
     bool isRunning() const;
 
     QVector<QRect> buildRects(int width, int height,
@@ -88,6 +94,13 @@ public:
                           const QString& mode = QString()) const;
     QColor processRaw(const QColor& raw, double boost = -1.0,
                       int minLevel = -1, int autoBright = -1) const;
+    // Те же операции, что движок применяет к цвету слоя. Вынесены наружу, чтобы
+    // предпросмотр в редакторе считал ровно так же, как лента: раньше редактор
+    // домножал каналы, а движок усиливал отклонение от серого, и цифры не
+    // совпадали.
+    static QColor applyBoost(const QColor& color, double boost);
+    static QColor applyBrightnessSaturation(const QColor& color, double brightness,
+                                            double saturation);
 
 public Q_SLOTS:
     void start();
@@ -98,11 +111,22 @@ Q_SIGNALS:
     void colorChanged(int red, int green, int blue);
 
 private:
+    // Растеризованная зона: прямоугольник в пикселях кадра + маска покрытия.
+    struct ZoneRaster {
+        QRect area;
+        QImage mask;
+    };
+
     void selectScreen();
+    void rebuildZoneRasters(const QSize& size);
     QVector<QColor> sampleGdi(const QVector<QRect>& rects) const;
+    QVector<QColor> sampleZonesGdi(const QVector<ZoneRaster>& rasters) const;
+    QColor combineZones(const QVector<QColor>& colors);
 #ifdef Q_OS_WIN
     QVector<QColor> sampleBackend(const QVector<QRect>& rects, const QSize& logicalSize) const;
+    QVector<QColor> sampleZonesBackend(const QVector<ZoneRaster>& rasters, const QSize& logicalSize) const;
 #endif
+    QColor finishColor(const QColor& raw);
 
     QTimer* timer_ = nullptr;
     QString region_ = QStringLiteral("top");
@@ -120,6 +144,11 @@ private:
     QRectF customRect_{0.0, 0.0, 1.0, 0.1};
     QString combine_ = QStringLiteral("average");
     CaptureMode captureMode_ = CaptureMode::Auto;
+    QVector<CaptureZone> zones_;
+    QVector<ZoneRaster> zoneRasters_;
+    QVector<QColor> zoneLast_;
+    QVector<bool> zoneHasLast_;
+    QSize zoneRasterSize_;
 
 #ifdef Q_OS_WIN
     std::unique_ptr<ScreenBackend> backend_;

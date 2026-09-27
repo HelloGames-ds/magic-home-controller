@@ -11,6 +11,11 @@ namespace {
 constexpr int QueueCapacity = 4;
 constexpr int WatchdogIntervalMs = 3000;
 constexpr int StalledWriteTimeoutMs = 15000;
+constexpr int PingIntervalMs = 10000;
+constexpr int PingTimeoutMs = 2500;
+constexpr int MissedPingsBeforeReconnect = 3;
+constexpr int MaxReconnectDelayMs = 30000;
+constexpr int StableConnectionMs = 10000;
 
 qint64 nowMs()
 {
@@ -26,14 +31,17 @@ WifiWorker::WifiWorker(QObject* parent)
     reconnectTimer_ = new QTimer(this);
     queueTimer_ = new QTimer(this);
     watchdogTimer_ = new QTimer(this);
+    pingTimer_ = new QTimer(this);
 
     reconnectTimer_->setSingleShot(true);
     queueTimer_->setSingleShot(true);
     watchdogTimer_->setInterval(WatchdogIntervalMs);
+    pingTimer_->setInterval(PingIntervalMs);
 
     connect(reconnectTimer_, &QTimer::timeout, this, &WifiWorker::connectToDevice);
     connect(queueTimer_, &QTimer::timeout, this, &WifiWorker::processQueue);
     connect(watchdogTimer_, &QTimer::timeout, this, &WifiWorker::watchdogTick);
+    connect(pingTimer_, &QTimer::timeout, this, &WifiWorker::pingTick);
 }
 
 WifiWorker::~WifiWorker()
@@ -60,8 +68,11 @@ void WifiWorker::start()
         return;
     }
     running_ = true;
+    reconnectDelayMs_ = 2000;
+    missedPings_ = 0;
     Q_EMIT statusChanged(tr("Starting Wi-Fi for %1…").arg(address_));
     watchdogTimer_->start();
+    pingTimer_->start();
     connectToDevice();
 }
 
@@ -71,7 +82,10 @@ void WifiWorker::stop()
     reconnectTimer_->stop();
     queueTimer_->stop();
     watchdogTimer_->stop();
+    pingTimer_->stop();
     pending_.clear();
+    pingSentAtMs_ = 0;
+    setDeviceReachable(false);
     resetSocket();
     Q_EMIT statusChanged(tr("Wi-Fi stopped"));
 }
@@ -193,6 +207,30 @@ void WifiWorker::queryState()
     }
 }
 
+void WifiWorker::pingTick()
+{
+    if (!running_ || !connected_ || !socket_) {
+        return;
+    }
+    if (pingSentAtMs_ > 0 && nowMs() - pingSentAtMs_ < PingTimeoutMs) {
+        return;
+    }
+    pingSentAtMs_ = nowMs();
+    send(protocol::queryStateCommand());
+}
+
+void WifiWorker::onReadyRead()
+{
+    if (!socket_ || sender() != socket_) {
+        return;
+    }
+    socket_->readAll();
+    pingSentAtMs_ = 0;
+    missedPings_ = 0;
+    reconnectDelayMs_ = 2000;
+    setDeviceReachable(true);
+}
+
 void WifiWorker::connectToDevice()
 {
     if (!running_ || socket_) {
@@ -212,9 +250,11 @@ void WifiWorker::connectToDevice()
     Q_EMIT statusChanged(tr("Connecting to %1:%2…").arg(hostAddress_.toString()).arg(protocol::Port));
 
     socket_ = new QTcpSocket(this);
+    socket_->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     connect(socket_, &QTcpSocket::connected, this, &WifiWorker::onConnected);
     connect(socket_, &QTcpSocket::disconnected, this, &WifiWorker::onDisconnected);
     connect(socket_, &QTcpSocket::errorOccurred, this, &WifiWorker::onErrorOccurred);
+    connect(socket_, &QTcpSocket::readyRead, this, &WifiWorker::onReadyRead);
 
     socket_->connectToHost(hostAddress_, protocol::Port);
 }
@@ -225,7 +265,11 @@ void WifiWorker::onConnected()
         return;
     }
     setConnected(true);
-    lastSuccessfulWriteAtMs_ = nowMs();
+    setDeviceReachable(true);
+    missedPings_ = 0;
+    pingSentAtMs_ = 0;
+    connectedAtMs_ = nowMs();
+    lastSuccessfulWriteAtMs_ = connectedAtMs_;
     Q_EMIT statusChanged(tr("Wi-Fi connected: %1").arg(address_));
     processQueue();
 }
@@ -236,11 +280,13 @@ void WifiWorker::onDisconnected()
         return;
     }
     setConnected(false);
+    setDeviceReachable(false);
     pending_.clear();
     resetSocket();
     if (running_) {
-        Q_EMIT statusChanged(tr("Wi-Fi disconnected. Retrying in 5 s…"));
-        scheduleReconnect();
+        const int delay = nextReconnectDelay();
+        Q_EMIT statusChanged(tr("Wi-Fi disconnected. Retrying in %1 s…").arg(delay / 1000));
+        scheduleReconnect(delay);
     }
 }
 
@@ -250,11 +296,13 @@ void WifiWorker::onErrorOccurred(QAbstractSocket::SocketError error)
         return;
     }
     const QString message = socket_ ? socket_->errorString() : tr("unknown error");
-    Q_EMIT statusChanged(tr("Wi-Fi unavailable (%1), retrying in 5 s…").arg(message));
+    const int delay = nextReconnectDelay();
+    Q_EMIT statusChanged(tr("Wi-Fi unavailable (%1), retrying in %2 s…").arg(message).arg(delay / 1000));
     setConnected(false);
+    setDeviceReachable(false);
     pending_.clear();
     resetSocket();
-    scheduleReconnect();
+    scheduleReconnect(delay);
     Q_UNUSED(error)
 }
 
@@ -299,10 +347,25 @@ void WifiWorker::watchdogTick()
         scheduleReconnect(0);
         return;
     }
+    if (connected_ && pingSentAtMs_ > 0 && nowMs() - pingSentAtMs_ > PingTimeoutMs) {
+        pingSentAtMs_ = 0;
+        ++missedPings_;
+        if (missedPings_ == 1) {
+            setDeviceReachable(false);
+            Q_EMIT statusChanged(tr("The strip is not responding"));
+        } else if (missedPings_ >= MissedPingsBeforeReconnect) {
+            Q_EMIT statusChanged(tr("The strip stopped responding, reconnecting…"));
+            setConnected(false);
+            setDeviceReachable(false);
+            resetSocket();
+            scheduleReconnect(0);
+        }
+    }
     if (connected_ && !pending_.isEmpty()
         && nowMs() - lastSuccessfulWriteAtMs_ > StalledWriteTimeoutMs) {
         Q_EMIT statusChanged(tr("Wi-Fi: queue not sending, reconnecting…"));
         setConnected(false);
+        setDeviceReachable(false);
         resetSocket();
         scheduleReconnect(0);
     }
@@ -325,14 +388,37 @@ void WifiWorker::setConnected(bool connected)
         return;
     }
     connected_ = connected;
+    if (!connected) {
+        setDeviceReachable(false);
+    }
     Q_EMIT connectedChanged(connected_);
+}
+
+void WifiWorker::setDeviceReachable(bool reachable)
+{
+    if (deviceReachable_ == reachable) {
+        return;
+    }
+    deviceReachable_ = reachable;
+    Q_EMIT deviceReachableChanged(deviceReachable_);
+}
+
+int WifiWorker::nextReconnectDelay()
+{
+    if (connectedAtMs_ > 0 && nowMs() - connectedAtMs_ >= StableConnectionMs) {
+        reconnectDelayMs_ = 2000;
+    }
+    const int delay = reconnectDelayMs_;
+    reconnectDelayMs_ = qMin(int(delay * 1.5), MaxReconnectDelayMs);
+    return delay;
 }
 
 void WifiWorker::scheduleReconnect(int milliseconds)
 {
-    if (running_ && !reconnectTimer_->isActive()) {
-        reconnectTimer_->start(milliseconds);
+    if (!running_ || reconnectTimer_->isActive()) {
+        return;
     }
+    reconnectTimer_->start(milliseconds < 0 ? nextReconnectDelay() : milliseconds);
 }
 
 WifiManager::WifiManager(QObject* parent)
@@ -359,6 +445,8 @@ WifiManager::WifiManager(QObject* parent)
             this, &WifiManager::statusChanged, Qt::QueuedConnection);
     connect(worker_, &WifiWorker::connectedChanged,
             this, &WifiManager::connectedChanged, Qt::QueuedConnection);
+    connect(worker_, &WifiWorker::deviceReachableChanged,
+            this, &WifiManager::deviceReachableChanged, Qt::QueuedConnection);
     connect(&thread_, &QThread::finished, worker_, &QObject::deleteLater);
 
     thread_.setObjectName(QStringLiteral("Magic Home TCP"));

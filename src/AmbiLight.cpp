@@ -78,6 +78,50 @@ int clippedChannel(int value, int previous)
 {
     return std::clamp(value, previous - kClipDelta, previous + kClipDelta);
 }
+
+// Контраст относительно среднего канала: ровно то, что делал boost амбилайта.
+QColor boostColor(const QColor& raw, double boost)
+{
+    if (!raw.isValid()) return {};
+    const double average = (raw.red() + raw.green() + raw.blue()) / 3.0;
+    int red = std::clamp(static_cast<int>(average + (raw.red() - average) * boost), 0, 255);
+    int green = std::clamp(static_cast<int>(average + (raw.green() - average) * boost), 0, 255);
+    int blue = std::clamp(static_cast<int>(average + (raw.blue() - average) * boost), 0, 255);
+    return {red, green, blue};
+}
+
+// Множители яркости и насыщенности поверх boost (0 — чёрный, 1 — без изменений).
+QColor adjustZoneColor(const QColor& color, double brightness, double saturation)
+{
+    if (!color.isValid()) return {};
+    const auto channel = [brightness, saturation](int value, int other1, int other2) {
+        const double average = (value + other1 + other2) / 3.0;
+        const double boosted = average + (value - average) * saturation;
+        return std::clamp(static_cast<int>(boosted * brightness), 0, 255);
+    };
+    return {channel(color.red(), color.green(), color.blue()),
+            channel(color.green(), color.red(), color.blue()),
+            channel(color.blue(), color.red(), color.green())};
+}
+
+// Отсечка тёмного и нормализация яркости поверх boost.
+QColor applyLevels(const QColor& color, int minLevel, bool autoBright)
+{
+    if (!color.isValid()) return {};
+    const double average = (color.red() + color.green() + color.blue()) / 3.0;
+    if (average < minLevel) return {0, 0, 0};
+    int red = color.red();
+    int green = color.green();
+    int blue = color.blue();
+    const int maximum = std::max({red, green, blue});
+    if (autoBright && maximum > 20 && maximum < 255) {
+        const double scale = 255.0 / maximum;
+        red = std::min(255, static_cast<int>(red * scale));
+        green = std::min(255, static_cast<int>(green * scale));
+        blue = std::min(255, static_cast<int>(blue * scale));
+    }
+    return {red, green, blue};
+}
 } // namespace
 
 AmbiLight::AmbiLight(QObject* parent) : QObject(parent), timer_(new QTimer(this))
@@ -95,9 +139,10 @@ const QHash<QString, QString>& AmbiLight::regions()
         {"center", tr("Center band")}, {"left", tr("Left band")},
         {"right", tr("Right band")}, {"full", tr("Full screen")},
         {"grid_3x3", tr("Grid 3×3")}, {"grid_5x3", tr("Grid 5×3")},
-        {"corner_tl", tr("Top-left corner")}, {"corner_tr", tr("Top-right corner")},
-        {"corner_bl", tr("Bottom-left corner")}, {"corner_br", tr("Bottom-right corner")},
-        {"custom", tr("Custom rectangle")}};
+    {"corner_tl", tr("Top-left corner")}, {"corner_tr", tr("Top-right corner")},
+    {"corner_bl", tr("Bottom-left corner")}, {"corner_br", tr("Bottom-right corner")},
+    {"corners", tr("All four corners")},
+    {"custom", tr("Custom rectangle")}};
     return value;
 }
 
@@ -157,6 +202,23 @@ void AmbiLight::setCustomRect(const QRectF& rect)
 void AmbiLight::setCombine(const QString& value)
 {
     if (combineModes().contains(value)) combine_ = value;
+}
+
+void AmbiLight::setZones(const QVector<CaptureZone>& zones)
+{
+    zones_ = zones;
+    zoneRasters_.clear();
+    zoneRasterSize_ = {};
+    zoneLast_.clear();
+    zoneHasLast_.clear();
+}
+
+bool AmbiLight::hasZones() const
+{
+    for (const CaptureZone& zone : zones_) {
+        if (zone.enabled && !zone.isEmpty()) return true;
+    }
+    return false;
 }
 
 QString AmbiLight::captureModeName(CaptureMode mode)
@@ -253,6 +315,10 @@ void AmbiLight::start()
     hasLast_ = false;
     last_ = QColor();
     rawLast_ = QColor();
+    zoneLast_.clear();
+    zoneHasLast_.clear();
+    zoneRasters_.clear();
+    zoneRasterSize_ = {};
 #ifdef Q_OS_WIN
     hwStill_.invalidate();
 #endif
@@ -347,6 +413,9 @@ QVector<QRect> AmbiLight::buildRects(int w, int h, const QString& selectedRegion
     if (r == "corner_tr") return {{w - cw, 0, cw, ch}};
     if (r == "corner_bl") return {{0, h - ch, cw, ch}};
     if (r == "corner_br") return {{w - cw, h - ch, cw, ch}};
+    // Все четыре угла сразу — один пресет вместо четырёх кнопок.
+    if (r == "corners") return {{0, 0, cw, ch}, {w - cw, 0, cw, ch},
+                               {0, h - ch, cw, ch}, {w - cw, h - ch, cw, ch}};
 
     if (r == "grid_3x3" || r == "grid_5x3") {
         const int columns = r == "grid_3x3" ? 3 : 5;
@@ -402,26 +471,211 @@ QColor AmbiLight::combineSamples(const QVector<QColor>& samples, const QString& 
     return combine(samples, mode);
 }
 
+QColor AmbiLight::applyBoost(const QColor& color, double boost)
+{
+    return boostColor(color, boost);
+}
+
+QColor AmbiLight::applyBrightnessSaturation(const QColor& color, double brightness,
+                                            double saturation)
+{
+    return adjustZoneColor(color, brightness, saturation);
+}
+
 QColor AmbiLight::processRaw(const QColor& raw, double selectedBoost,
                              int selectedMinLevel, int selectedAutoBright) const
 {
     const double b = selectedBoost < 0.0 ? boost_ : selectedBoost;
     const int minimum = selectedMinLevel < 0 ? minLevel_ : selectedMinLevel;
     const bool normalize = selectedAutoBright < 0 ? autoBright_ : selectedAutoBright != 0;
-    const double average = (raw.red() + raw.green() + raw.blue()) / 3.0;
-    if (average < minimum) return {0, 0, 0};
-    int red = std::clamp(static_cast<int>(average + (raw.red() - average) * b), 0, 255);
-    int green = std::clamp(static_cast<int>(average + (raw.green() - average) * b), 0, 255);
-    int blue = std::clamp(static_cast<int>(average + (raw.blue() - average) * b), 0, 255);
-    const int maximum = std::max({red, green, blue});
-    if (normalize && maximum > 20 && maximum < 255) {
-        const double scale = 255.0 / maximum;
-        red = std::min(255, static_cast<int>(red * scale));
-        green = std::min(255, static_cast<int>(green * scale));
-        blue = std::min(255, static_cast<int>(blue * scale));
-    }
-    return {red, green, blue};
+    return applyLevels(boostColor(raw, b), minimum, normalize);
 }
+
+void AmbiLight::rebuildZoneRasters(const QSize& size)
+{
+    if (zoneRasterSize_ == size && int(zoneRasters_.size()) == zones_.size()) return;
+    zoneRasters_.clear();
+    zoneRasters_.reserve(zones_.size());
+    for (const CaptureZone& zone : zones_) {
+        ZoneRaster raster;
+        if (zone.enabled && !zone.isEmpty() && zone.rasterize(size, &raster.area, &raster.mask))
+            zoneRasters_.push_back(raster);
+        else
+            zoneRasters_.push_back(ZoneRaster{});
+    }
+    zoneRasterSize_ = size;
+    zoneLast_.clear();
+    zoneHasLast_.clear();
+}
+
+QVector<QColor> AmbiLight::sampleZonesGdi(const QVector<ZoneRaster>& rasters) const
+{
+    QVector<QColor> colors;
+    colors.reserve(rasters.size());
+    for (const ZoneRaster& raster : rasters) {
+        if (raster.area.isEmpty() || raster.mask.isNull()) {
+            colors.push_back(QColor());
+            continue;
+        }
+        const QPixmap shot = screen_->grabWindow(0, raster.area.x(), raster.area.y(),
+                                                 raster.area.width(), raster.area.height());
+        if (shot.isNull()) {
+            colors.push_back(QColor());
+            continue;
+        }
+        const QImage image = shot.toImage().convertToFormat(QImage::Format_RGB32);
+        if (image.width() < 1 || image.height() < 1) {
+            colors.push_back(QColor());
+            continue;
+        }
+        const int stepX = std::max(1, image.width() / 8);
+        const int stepY = std::max(1, image.height() / 8);
+        const int maskWidth = raster.mask.width();
+        const int maskHeight = raster.mask.height();
+        quint64 red = 0, green = 0, blue = 0;
+        int count = 0;
+        for (int y = 0; y < image.height(); y += stepY) {
+            const int maskY = std::clamp(y * maskHeight / image.height(), 0, maskHeight - 1);
+            const auto* maskRow = reinterpret_cast<const uchar*>(raster.mask.constScanLine(maskY));
+            for (int x = 0; x < image.width(); x += stepX) {
+                const int maskX = std::clamp(x * maskWidth / image.width(), 0, maskWidth - 1);
+                if (maskRow[maskX] == 0) continue;
+                const QRgb pixel = image.pixel(x, y);
+                red += qRed(pixel);
+                green += qGreen(pixel);
+                blue += qBlue(pixel);
+                ++count;
+            }
+        }
+        colors.push_back(count > 0 ? QColor(int(red / count), int(green / count), int(blue / count))
+                                   : QColor());
+    }
+    return colors;
+}
+
+#ifdef Q_OS_WIN
+QVector<QColor> AmbiLight::sampleZonesBackend(const QVector<ZoneRaster>& rasters,
+                                              const QSize& logicalSize) const
+{
+    QVector<QColor> colors;
+    const QSize dxSize = backend_->size();
+    if (dxSize.isEmpty()) {
+        backend_->releaseFrame();
+        return colors;
+    }
+    colors.reserve(rasters.size());
+    const double scaleX = double(dxSize.width()) / double(logicalSize.width());
+    const double scaleY = double(dxSize.height()) / double(logicalSize.height());
+    for (const ZoneRaster& raster : rasters) {
+        if (raster.area.isEmpty() || raster.mask.isNull()) {
+            colors.push_back(QColor());
+            continue;
+        }
+        const QRect phys(qRound(raster.area.x() * scaleX), qRound(raster.area.y() * scaleY),
+                         qRound(raster.area.width() * scaleX), qRound(raster.area.height() * scaleY));
+        colors.push_back(backend_->sampleMask(phys, raster.mask));
+    }
+    backend_->releaseFrame();
+    return colors;
+}
+#endif
+
+QColor AmbiLight::combineZones(const QVector<QColor>& colors)
+{
+    if (colors.isEmpty()) return {};
+    if (zoneLast_.size() != colors.size()) {
+        zoneLast_ = QVector<QColor>(colors.size());
+        zoneHasLast_ = QVector<bool>(colors.size(), false);
+    }
+
+    QVector<QColor> processed;
+    QVector<double> weights;
+    processed.reserve(colors.size());
+    int index = 0;
+    for (const CaptureZone& zone : zones_) {
+        if (!zone.enabled || zone.isEmpty()) continue;
+        if (index >= colors.size()) break;
+        QColor color = colors.at(index);
+        const int slot = index++;
+        if (!color.isValid()) continue;
+
+        const double zoneBoost = zone.boost < 0.0 ? boost_ : std::clamp(zone.boost, 1.0, 3.0);
+        const double zoneSmooth = zone.smooth < 0.0 ? smooth_ : std::clamp(zone.smooth, 0.0, 0.9);
+        color = boostColor(color, zoneBoost);
+        color = adjustZoneColor(color, std::clamp(zone.brightness, 0.0, 2.0),
+                                std::clamp(zone.saturation, 0.0, 2.0));
+        // Кривые слоя применяем после яркости/насыщенности и до смешивания
+        // слоёв, как это делает Photoshop для своих adjustment-слоёв.
+        color = zone.applyCurves(color);
+        if (zoneSmooth > 0.0 && zoneHasLast_[slot] && zoneLast_[slot].isValid()) {
+            const QColor previous = zoneLast_[slot];
+            color = QColor(int(previous.red() * zoneSmooth + color.red() * (1.0 - zoneSmooth)),
+                           int(previous.green() * zoneSmooth + color.green() * (1.0 - zoneSmooth)),
+                           int(previous.blue() * zoneSmooth + color.blue() * (1.0 - zoneSmooth)));
+        }
+        zoneLast_[slot] = color;
+        zoneHasLast_[slot] = true;
+        processed.push_back(color);
+        weights.push_back(std::max(0.0, zone.weight));
+    }
+    if (processed.isEmpty()) return {};
+
+    if (combine_ == "brightest" || combine_ == "saturated") {
+        int best = 0;
+        for (int i = 1; i < processed.size(); ++i) {
+            const QColor& candidate = processed.at(i);
+            const QColor& current = processed.at(best);
+            const auto spread = [](const QColor& c) {
+                return std::max({c.red(), c.green(), c.blue()}) - std::min({c.red(), c.green(), c.blue()});
+            };
+            const bool better = combine_ == "brightest"
+                ? candidate.red() + candidate.green() + candidate.blue()
+                      > current.red() + current.green() + current.blue()
+                : spread(candidate) > spread(current);
+            if (better) best = i;
+        }
+        return applyLevels(processed.at(best), minLevel_, autoBright_);
+    }
+
+    double total = 0.0;
+    double red = 0.0, green = 0.0, blue = 0.0;
+    for (int i = 0; i < processed.size(); ++i) {
+        const double weight = weights.at(i);
+        red += processed.at(i).red() * weight;
+        green += processed.at(i).green() * weight;
+        blue += processed.at(i).blue() * weight;
+        total += weight;
+    }
+    if (total <= 0.0) return applyLevels(processed.constFirst(), minLevel_, autoBright_);
+    return applyLevels(QColor(int(red / total), int(green / total), int(blue / total)),
+                       minLevel_, autoBright_);
+}
+
+QColor AmbiLight::finishColor(const QColor& raw)
+{
+    if (!raw.isValid()) return {};
+    QColor color = raw;
+    int red = color.red(), green = color.green(), blue = color.blue();
+    if (hasLast_) {
+        red = clippedChannel(red, last_.red());
+        green = clippedChannel(green, last_.green());
+        blue = clippedChannel(blue, last_.blue());
+        if (smooth_ > 0.0) {
+            red = static_cast<int>(last_.red() * smooth_ + red * (1.0 - smooth_));
+            green = static_cast<int>(last_.green() * smooth_ + green * (1.0 - smooth_));
+            blue = static_cast<int>(last_.blue() * smooth_ + blue * (1.0 - smooth_));
+        }
+        if (std::max({qAbs(red - last_.red()), qAbs(green - last_.green()),
+                      qAbs(blue - last_.blue())}) < 3)
+            return {};
+    }
+    rawLast_ = raw;
+    last_ = QColor(red, green, blue);
+    hasLast_ = true;
+    Q_EMIT colorChanged(red, green, blue);
+    return last_;
+}
+
 
 void AmbiLight::capture()
 {
@@ -437,51 +691,59 @@ void AmbiLight::capture()
     }
 #endif
     const QSize size = screen_->geometry().size();
-    const QVector<QRect> rects = buildRects(size.width(), size.height());
-    QVector<QColor> samples;
+    const bool useZones = hasZones();
+    QColor raw;
 
+    if (useZones) {
+        rebuildZoneRasters(size);
+        if (zoneRasters_.isEmpty()) return;
 #ifdef Q_OS_WIN
-    if (backend_ && backend_->active()) {
-        const bool hasFrame = backend_->frameAvailable();
-        const quint64 stillMs = hwStill_.isValid() ? quint64(hwStill_.elapsed()) : 1001;
-        if (hasFrame) {
-            hwStill_.restart();
-            samples = sampleBackend(rects, size);
-        } else if (stillMs >= 1000) {
-            // Статичный экран: аппаратные бэкенды (Desktop Duplication, WGC)
-            // не выдают кадры без изменений, поэтому раз в секунду делаем
-            // контрольный GDI-снимок, чтобы амбилайт не «замирал».
-            hwStill_.restart();
-            samples = sampleGdi(rects);
-        } else {
-            return;
-        }
-    } else
+        if (backend_ && backend_->active()) {
+            const bool hasFrame = backend_->frameAvailable();
+            const quint64 stillMs = hwStill_.isValid() ? quint64(hwStill_.elapsed()) : 1001;
+            if (hasFrame) {
+                hwStill_.restart();
+                raw = combineZones(sampleZonesBackend(zoneRasters_, size));
+            } else if (stillMs >= 1000) {
+                // Статичный экран: аппаратные бэкенды (Desktop Duplication, WGC)
+                // не выдают кадров без изменений, поэтому раз в секунду делаем
+                // контрольный GDI-снимок, чтобы амбилайт не «замирал».
+                hwStill_.restart();
+                raw = combineZones(sampleZonesGdi(zoneRasters_));
+            } else {
+                return;
+            }
+        } else
 #endif
-    {
-        samples = sampleGdi(rects);
-    }
-    if (samples.isEmpty()) return;
-    const QColor raw = combine(samples);
-    QColor color = processRaw(raw);
-    int red = color.red(), green = color.green(), blue = color.blue();
-    if (hasLast_) {
-        red = clippedChannel(red, last_.red());
-        green = clippedChannel(green, last_.green());
-        blue = clippedChannel(blue, last_.blue());
-        if (smooth_ > 0.0) {
-            red = static_cast<int>(last_.red() * smooth_ + red * (1.0 - smooth_));
-            green = static_cast<int>(last_.green() * smooth_ + green * (1.0 - smooth_));
-            blue = static_cast<int>(last_.blue() * smooth_ + blue * (1.0 - smooth_));
+        {
+            raw = combineZones(sampleZonesGdi(zoneRasters_));
         }
-        if (std::max({qAbs(red - last_.red()), qAbs(green - last_.green()),
-                      qAbs(blue - last_.blue())}) < 3)
-            return;
+    } else {
+        const QVector<QRect> rects = buildRects(size.width(), size.height());
+        QVector<QColor> samples;
+#ifdef Q_OS_WIN
+        if (backend_ && backend_->active()) {
+            const bool hasFrame = backend_->frameAvailable();
+            const quint64 stillMs = hwStill_.isValid() ? quint64(hwStill_.elapsed()) : 1001;
+            if (hasFrame) {
+                hwStill_.restart();
+                samples = sampleBackend(rects, size);
+            } else if (stillMs >= 1000) {
+                hwStill_.restart();
+                samples = sampleGdi(rects);
+            } else {
+                return;
+            }
+        } else
+#endif
+        {
+            samples = sampleGdi(rects);
+        }
+        if (samples.isEmpty()) return;
+        raw = processRaw(combine(samples));
     }
-    rawLast_ = raw;
-    last_ = QColor(red, green, blue);
-    hasLast_ = true;
-    Q_EMIT colorChanged(red, green, blue);
+
+    finishColor(raw);
 }
 
 } // namespace elkbledom

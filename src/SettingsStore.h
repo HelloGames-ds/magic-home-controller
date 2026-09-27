@@ -41,12 +41,17 @@ struct AppSettings
     QString ambiCombine = QStringLiteral("average");
     QRectF ambiRect = QRectF(0.0, 0.0, 1.0, 0.1);
     QString ambiCapture = QStringLiteral("auto");
+    QString ambiZones;
+    // Easy — работают только заготовленные области захвата, свои слои сохранены,
+    // но не применяются. Advanced — слои применяются и имеют приоритет.
+    bool ambiEasy = true;
 
     QStringList lastDevices;
     bool restorePower = true;
     bool lastPowerOn = false;
     bool powerOffOnExit = false;
     bool powerOffOnShutdown = false;
+    bool powerOffOnLock = false;
 
     double netInterval = 0.0;
     double netDedup = 0.5;
@@ -54,6 +59,8 @@ struct AppSettings
     int smoothTau = 200;
     bool instantColor = false;
     bool loggingEnabled = true;
+    bool checkUpdates = true;
+    QString skippedVersion;
     bool autostart = false;
     bool startMinimized = false;
     bool saveOnExit = true;

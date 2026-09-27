@@ -1,3 +1,4 @@
+#include "CrashLog.h"
 #include "MainWindow.h"
 #include "SettingsStore.h"
 #include "config.h"
@@ -25,6 +26,8 @@ void setWindowsApplicationId()
 
 int main(int argc, char* argv[])
 {
+    // Ставим логгер до всего: он должен пережить падение в конструкторах.
+    elkmhc::installCrashLog();
 #ifdef Q_OS_WIN
     setWindowsApplicationId();
 #endif
@@ -47,9 +50,15 @@ int main(int argc, char* argv[])
         if (language == QStringLiteral("ru")) {
             QString appRu = QCoreApplication::applicationDirPath()
                                 + QStringLiteral("/translations/magic_home_controller_ru.qm");
-            if (appTranslator.load(appRu) || appTranslator.load(QStringLiteral(":/i18n/magic_home_controller_ru.qm"))) {
-                application.installTranslator(&appTranslator);
-            }
+    if (appTranslator.load(appRu) || appTranslator.load(QStringLiteral(":/i18n/magic_home_controller_ru.qm"))) {
+        application.installTranslator(&appTranslator);
+    } else {
+        // Английский каталог нужен, чтобы подписи собирались из одного места, а не
+        // расходились по двум редакциям.
+        const QString appEn = QCoreApplication::applicationDirPath()
+                              + QStringLiteral("/translations/magic_home_controller_en.qm");
+        if (appTranslator.load(appEn)) application.installTranslator(&appTranslator);
+    }
             QString qtBaseRu = QCoreApplication::applicationDirPath()
                                    + QStringLiteral("/translations/qtbase_ru.qm");
             if (!qtTranslator.load(qtBaseRu)) {

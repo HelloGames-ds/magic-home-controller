@@ -9,8 +9,9 @@
 #include "EffectEngine.h"
 #include "IconFactory.h"
 #include "LogWindow.h"
-#include "SessionShutdownFilter.h"
+#include "SystemSessionFilter.h"
 #include "TrayPopup.h"
+#include "UpdateChecker.h"
 #include "WifiWorker.h"
 #include "config.h"
 #include "protocol.h"
@@ -22,16 +23,20 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QDesktopServices>
 #include <QFormLayout>
 #include <QFrame>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
+#include <QMessageBox>
 #include <QPalette>
 #include <QProcess>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScreen>
 #include <QScrollArea>
@@ -48,7 +53,7 @@ namespace elkbledom {
 namespace {
 QFrame* card(QWidget* parent = nullptr) { auto* f = new QFrame(parent); f->setProperty("role", "card"); return f; }
 QLabel* valueLabel(const QString& text, QWidget* parent = nullptr) { auto* l = new QLabel(text, parent); l->setProperty("role", "value"); return l; }
-QScrollArea* scrollPage(QWidget*& body, QTabWidget* parent) { auto* s = new QScrollArea(parent); s->setWidgetResizable(true); s->setFrameShape(QFrame::NoFrame); body = new QWidget; s->setWidget(body); return s; }
+QScrollArea* scrollPage(QWidget*& body, QTabWidget* parent) { auto* s = new QScrollArea(parent); s->setWidgetResizable(true); s->setFrameShape(QFrame::NoFrame); s->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); s->setMinimumWidth(320); body = new QWidget; body->setMinimumWidth(0); s->setWidget(body); return s; }
 }
 
 MainWindow::MainWindow(QWidget* parent)
@@ -58,7 +63,7 @@ MainWindow::MainWindow(QWidget* parent)
 {
     settings_ = store_->load();
     currentColor_ = settings_.color;
-    setWindowTitle(QString::fromLatin1(config::ApplicationDisplayName));
+    setWindowTitle(QStringLiteral("%1 %2").arg(QString::fromLatin1(config::ApplicationDisplayName), QString::fromLatin1(APP_VERSION)));
     setWindowIcon(IconFactory::appIcon());
     setMinimumSize(535, 865);
 
@@ -71,14 +76,18 @@ MainWindow::MainWindow(QWidget* parent)
     tabs_ = new QTabWidget(central); tabs_->addTab(createControlTab(), tr("Control"));
     tabs_->addTab(createEffectsTab(), tr("Effects")); tabs_->addTab(createAmbilightTab(), tr("Ambilight"));
     tabs_->addTab(createSettingsTab(), tr("Settings")); root->addWidget(tabs_, 1);
-    statusLabel_ = new QLabel(tr("Ready"), central); statusLabel_->setProperty("role", "status"); root->addWidget(statusLabel_);
+    statusLabel_ = new QLabel(tr("Ready"), central); statusLabel_->setTextFormat(Qt::RichText); statusLabel_->setProperty("role", "status"); root->addWidget(statusLabel_);
     setCentralWidget(central);
 
-    popup_ = new TrayPopup(this); connectSignals(); applySettingsToUi(); setupTray();
+    popup_ = new TrayPopup(this); connectSignals(); applySettingsToUi(); setupTray(); setupUpdater();
 
-    shutdownFilter_ = new SessionShutdownFilter(this);
-    shutdownFilter_->setHandler([this] { sendShutdownPowerOff(); });
-    qApp->installNativeEventFilter(shutdownFilter_);
+    sessionFilter_ = new SystemSessionFilter(this);
+    sessionFilter_->setShutdownHandler([this] { sendShutdownPowerOff(); });
+    qApp->installNativeEventFilter(sessionFilter_);
+    connect(sessionFilter_,&SystemSessionFilter::sessionLocked,this,[this]{handleSessionAway(tr("screen locked"));});
+    connect(sessionFilter_,&SystemSessionFilter::suspendRequested,this,[this]{handleSessionAway(tr("sleep"));});
+    connect(sessionFilter_,&SystemSessionFilter::sessionUnlocked,this,[this]{handleSessionBack(tr("unlocked"));});
+    connect(sessionFilter_,&SystemSessionFilter::resumeRequested,this,[this]{handleSessionBack(tr("resumed"));});
 
     keepaliveTimer_ = new QTimer(this); keepaliveTimer_->setInterval(15000);
     connect(keepaliveTimer_, &QTimer::timeout, this, [this] {
@@ -92,6 +101,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(smoothTestTimer_, &QTimer::timeout, this, &MainWindow::smoothTestStep);
 
     AppLog::setEnabled(settings_.loggingEnabled);
+    sessionFilter_->watchWindow(this);
     wifi_->setAddress(settings_.address); wifi_->setMinimumInterval(settings_.netInterval);
     wifi_->setDeduplicationWindow(settings_.netDedup);
     smoother_->setEnabled(settings_.smoothEnabled); smoother_->setTau(settings_.smoothTau);
@@ -100,7 +110,7 @@ MainWindow::MainWindow(QWidget* parent)
     QTimer::singleShot(0, wifi_, &WifiManager::start);
 }
 
-MainWindow::~MainWindow() { if (qApp && shutdownFilter_) qApp->removeNativeEventFilter(shutdownFilter_); effects_->stop(); ambilight_->stop(); wifi_->stop(); }
+MainWindow::~MainWindow() { if (qApp && sessionFilter_) qApp->removeNativeEventFilter(sessionFilter_); effects_->stop(); ambilight_->stop(); wifi_->stop(); }
 
 QWidget* MainWindow::createControlTab()
 {
@@ -111,7 +121,7 @@ QWidget* MainWindow::createControlTab()
     auto* b = card(w); auto* bl = new QHBoxLayout(b); bl->addWidget(new QLabel(tr("Brightness"), b)); brightnessSlider_ = new QSlider(Qt::Horizontal,b); brightnessSlider_->setRange(1,100); bl->addWidget(brightnessSlider_,1); brightnessValue_=valueLabel("100%",b); bl->addWidget(brightnessValue_); v->addWidget(b);
     auto* m=card(w); auto* ml=new QHBoxLayout(m); ml->addWidget(new QLabel(tr("Source"),m)); modeCombo_=new QComboBox(m); modeCombo_->addItem(tr("Effect"),"effect"); modeCombo_->addItem(tr("Ambilight"),"ambilight"); ml->addWidget(modeCombo_,1); v->addWidget(m);
     auto* t=card(w); auto* tl=new QHBoxLayout(t); tl->addWidget(new QLabel(tr("Smoothness"),t)); smoothTestButton_=new QPushButton(tr("▶  Smoothness test"),t); tl->addWidget(smoothTestButton_,1); v->addWidget(t);
-    auto* ph=new QHBoxLayout; auto* on=new QPushButton(tr("Turn on"),w); on->setProperty("accent",true); on->setMinimumHeight(44); auto* off=new QPushButton(tr("Turn off"),w); off->setProperty("danger",true); off->setMinimumHeight(44); ph->addWidget(on); ph->addWidget(off); v->addLayout(ph); v->addStretch();
+    auto* ph=new QHBoxLayout; auto* on=new QPushButton(tr("Turn on"),w); on->setProperty("accent",true); on->setMinimumHeight(34); auto* off=new QPushButton(tr("Turn off"),w); off->setProperty("danger",true); off->setMinimumHeight(34); ph->addWidget(on); ph->addWidget(off); v->addLayout(ph); v->addStretch();
     connect(on,&QPushButton::clicked,this,[this]{setPower(true);}); connect(off,&QPushButton::clicked,this,[this]{setPower(false);}); return w;
 }
 
@@ -138,7 +148,7 @@ QWidget* MainWindow::createAmbilightTab()
     for(const QString& key:{QStringLiteral("auto"),QStringLiteral("dxgi"),QStringLiteral("gdi"),QStringLiteral("wgc")})
         ambiCaptureCombo_->addItem(AmbiLight::captureModeName(AmbiLight::captureModeFromString(key)),key);
     cl->addWidget(ambiCaptureCombo_);v->addWidget(cg);
-    ambilightSummary_=new QLabel(w);ambilightSummary_->setWordWrap(true);ambilightSummary_->setProperty("role","info");v->addWidget(ambilightSummary_);auto* edit=new QPushButton(tr("Open area and parameters editor…"),w);edit->setMinimumHeight(44);v->addWidget(edit);
+    ambilightSummary_=new QLabel(w);ambilightSummary_->setWordWrap(true);ambilightSummary_->setProperty("role","info");v->addWidget(ambilightSummary_);auto* edit=new QPushButton(tr("Open area and parameters editor…"),w);edit->setMinimumHeight(34);v->addWidget(edit);
     ambilightState_=new QLabel(tr("Ambilight off"),w);ambilightState_->setAlignment(Qt::AlignCenter);ambilightState_->setProperty("role","status");v->addWidget(ambilightState_);auto* row2=new QHBoxLayout;auto* on=new QPushButton(tr("Turn on Ambilight"),w);on->setProperty("accent",true);auto* off=new QPushButton(tr("Turn off"),w);off->setProperty("danger",true);row2->addWidget(on);row2->addWidget(off);v->addLayout(row2);v->addStretch();
     connect(edit,&QPushButton::clicked,this,[this]{
         if(!ambiEditor_){
@@ -149,11 +159,20 @@ QWidget* MainWindow::createAmbilightTab()
                 settings_.ambiMin=m.value("ambi_min").toInt(); settings_.ambiAuto=m.value("ambi_auto").toBool();
                 settings_.ambiFreq=m.value("ambi_freq").toDouble(); settings_.ambiScreen=m.value("ambi_screen").toInt();
                 settings_.ambiCombine=m.value("ambi_combine").toString(); settings_.ambiRect=m.value("ambi_rect").toRectF();
-                settings_.ambiCapture=m.value("ambi_capture").toString();
+                settings_.ambiCapture=m.value("ambi_capture").toString(); settings_.ambiZones=m.value("ambi_zones").toString();
+                settings_.ambiEasy=m.value("ambi_easy").toBool();
                 pushAmbilightSettings(); refreshScreens(); updateAmbilightSummary(); store_->save(settings_);
             });
+            connect(ambiEditor_,&AmbiEditor::zonesChanged,this,[this](const QString& zones){
+                if(settings_.ambiZones==zones) return;
+                settings_.ambiZones=zones;
+                // Слои редактируются только в Advanced: в Easy они сохранены,
+                // но не применяются, иначе пресеты перестают работать.
+                if(!settings_.ambiEasy) pushAmbilightSettings();
+                updateAmbilightSummary(); store_->save(settings_);
+            });
         }
-        QVariantMap m; m["ambi_region"]=settings_.ambiRegion;m["ambi_band"]=settings_.ambiBand;m["ambi_boost"]=settings_.ambiBoost;m["ambi_smooth"]=settings_.ambiSmooth;m["ambi_min"]=settings_.ambiMin;m["ambi_auto"]=settings_.ambiAuto;m["ambi_freq"]=settings_.ambiFreq;m["ambi_screen"]=settings_.ambiScreen;m["ambi_combine"]=settings_.ambiCombine;m["ambi_rect"]=settings_.ambiRect;m["ambi_capture"]=settings_.ambiCapture;
+        QVariantMap m; m["ambi_region"]=settings_.ambiRegion;m["ambi_band"]=settings_.ambiBand;m["ambi_boost"]=settings_.ambiBoost;m["ambi_smooth"]=settings_.ambiSmooth;m["ambi_min"]=settings_.ambiMin;m["ambi_auto"]=settings_.ambiAuto;m["ambi_freq"]=settings_.ambiFreq;m["ambi_screen"]=settings_.ambiScreen;m["ambi_combine"]=settings_.ambiCombine;m["ambi_rect"]=settings_.ambiRect;m["ambi_capture"]=settings_.ambiCapture;m["ambi_zones"]=settings_.ambiZones;m["ambi_easy"]=settings_.ambiEasy;
         ambiEditor_->setSettings(m);ambiEditor_->show();ambiEditor_->raise();
     });
     connect(on,&QPushButton::clicked,this,[this]{setMode("ambilight");});connect(off,&QPushButton::clicked,this,[this]{setMode("effect");});return w;
@@ -161,14 +180,14 @@ QWidget* MainWindow::createAmbilightTab()
 
 QWidget* MainWindow::createSettingsTab()
 {
-    QWidget* body=nullptr;auto* scroll=scrollPage(body,tabs_);auto* v=new QVBoxLayout(body);v->setContentsMargins(20,20,20,20);v->setSpacing(14);
-    auto* dev=new QGroupBox(tr("Device"),body);auto* dv=new QVBoxLayout(dev);auto* mr=new QHBoxLayout;addressEdit_=new QLineEdit(dev);applyAddressButton_=new QPushButton(tr("Apply"),dev);mr->addWidget(addressEdit_,1);mr->addWidget(applyAddressButton_);dv->addLayout(mr);scanButton_=new QPushButton(tr("🔍  Find Magic Home devices"),dev);dv->addWidget(scanButton_);deviceList_=new QListWidget(dev);deviceList_->setMinimumHeight(100);dv->addWidget(deviceList_);useDeviceButton_=new QPushButton(tr("Use selected"),dev);dv->addWidget(useDeviceButton_);v->addWidget(dev);
+    QWidget* body=nullptr;auto* scroll=scrollPage(body,tabs_);auto* v=new QVBoxLayout(body);v->setContentsMargins(12,12,12,12);v->setSpacing(8);
+    auto* dev=new QGroupBox(tr("Device"),body);auto* dv=new QVBoxLayout(dev);auto* mr=new QHBoxLayout;addressEdit_=new QLineEdit(dev);addressEdit_->setMinimumWidth(120);applyAddressButton_=new QPushButton(tr("Apply"),dev);mr->addWidget(addressEdit_,1);mr->addWidget(applyAddressButton_);dv->addLayout(mr);scanButton_=new QPushButton(tr("🔍  Find Magic Home devices"),dev);dv->addWidget(scanButton_);deviceList_=new QListWidget(dev);deviceList_->setFixedHeight(64);dv->addWidget(deviceList_);useDeviceButton_=new QPushButton(tr("Use selected"),dev);useDeviceButton_->setProperty("accent",true);dv->addWidget(useDeviceButton_);v->addWidget(dev);
     auto makeSlider=[&](QFormLayout* f,const QString& name,QSlider*& s,QLabel*& l,int lo,int hi){auto* r=new QHBoxLayout;s=new QSlider(Qt::Horizontal,body);s->setRange(lo,hi);l=valueLabel(QString(),body);r->addWidget(s,1);r->addWidget(l);f->addRow(name,r);};
-    auto* bg=new QGroupBox(tr("Wi-Fi (TCP)"),body);auto* bf=new QFormLayout(bg);makeSlider(bf,tr("Interval:"),netIntervalSlider_,netIntervalValue_,0,200);makeSlider(bf,tr("Deduplication:"),netDedupSlider_,netDedupValue_,0,500);v->addWidget(bg);
+    auto* bg=new QGroupBox("Wi-Fi (TCP)",body);auto* bf=new QFormLayout(bg);makeSlider(bf,tr("Interval:"),netIntervalSlider_,netIntervalValue_,0,200);makeSlider(bf,tr("Deduplication:"),netDedupSlider_,netDedupValue_,0,500);v->addWidget(bg);
     auto* sg=new QGroupBox(tr("Smoothing"),body);auto* sf=new QFormLayout(sg);smoothingCheck_=new QCheckBox(tr("Enable smooth transitions"),sg);sf->addRow(smoothingCheck_);makeSlider(sf,tr("Transition time:"),tauSlider_,tauValue_,20,500);instantColorCheck_=new QCheckBox(tr("Instant color response"),sg);sf->addRow(instantColorCheck_);v->addWidget(sg);
-    auto* lg=new QGroupBox(tr("Logging"),body);auto* ll=new QVBoxLayout(lg);loggingCheck_=new QCheckBox(tr("Write log file"),lg);ll->addWidget(loggingCheck_);auto* lr=new QHBoxLayout;openLogButton_=new QPushButton(tr("Open log"),lg);clearLogButton_=new QPushButton(tr("Clear buffer"),lg);lr->addWidget(openLogButton_);lr->addWidget(clearLogButton_);ll->addLayout(lr);v->addWidget(lg);
+    auto* lg=new QGroupBox(tr("Logging"),body);auto* ll=new QVBoxLayout(lg);loggingCheck_=new QCheckBox(tr("Write log file"),lg);ll->addWidget(loggingCheck_);auto* lr=new QHBoxLayout;openLogButton_=new QPushButton(tr("Open log"),lg);clearLogButton_=new QPushButton(tr("Clear buffer"),lg);lr->addWidget(openLogButton_);lr->addWidget(clearLogButton_);lr->addStretch();ll->addLayout(lr);v->addWidget(lg);auto* ug=new QGroupBox(tr("Updates"),body);auto* uv=new QVBoxLayout(ug);versionLabel_=new QLabel(ug);versionLabel_->setProperty("role","info");versionLabel_->setText(tr("Installed version: %1").arg(QString::fromLatin1(APP_VERSION)));uv->addWidget(versionLabel_);checkUpdatesCheck_=new QCheckBox(tr("Check for updates automatically"),ug);uv->addWidget(checkUpdatesCheck_);checkUpdatesButton_=new QPushButton(tr("Check for updates now"),ug);checkUpdatesButton_->setProperty("accent",true);uv->addWidget(checkUpdatesButton_);updateProgress_=new QProgressBar(ug);updateProgress_->setVisible(false);uv->addWidget(updateProgress_);v->addWidget(ug);
     auto* lang=new QGroupBox(tr("Language"),body);auto* langForm=new QFormLayout(lang);languageCombo_=new QComboBox(lang);languageCombo_->addItem(QStringLiteral("English"),QStringLiteral("en"));languageCombo_->addItem(QStringLiteral("Русский"),QStringLiteral("ru"));langForm->addRow(tr("Interface language:"),languageCombo_);v->addWidget(lang);
-    auto* behavior=new QGroupBox(tr("Behavior"),body);auto* bv=new QVBoxLayout(behavior);autostartCheck_=new QCheckBox(tr("Start with Windows"),behavior);minimizedCheck_=new QCheckBox(tr("Start minimized"),behavior);saveOnExitCheck_=new QCheckBox(tr("Save settings on exit"),behavior);keepaliveCheck_=new QCheckBox(tr("Keepalive for static color"),behavior);restorePowerCheck_=new QCheckBox(tr("Restore powered-on state on startup"),behavior);powerOffOnExitCheck_=new QCheckBox(tr("Turn the strip off on exit"),behavior);powerOffOnShutdownCheck_=new QCheckBox(tr("Turn the strip off when Windows shuts down"),behavior);bv->addWidget(autostartCheck_);bv->addWidget(minimizedCheck_);bv->addWidget(saveOnExitCheck_);bv->addWidget(keepaliveCheck_);bv->addWidget(restorePowerCheck_);bv->addWidget(powerOffOnExitCheck_);bv->addWidget(powerOffOnShutdownCheck_);v->addWidget(behavior);auto* save=new QPushButton(tr("Save settings"),body);save->setProperty("accent",true);save->setMinimumHeight(44);v->addWidget(save);v->addStretch();connect(save,&QPushButton::clicked,this,&MainWindow::saveSettings);return scroll;
+    auto* behavior=new QGroupBox(tr("Behavior"),body);auto* bv=new QVBoxLayout(behavior);bv->setSpacing(2);bv->setContentsMargins(8,4,8,4);autostartCheck_=new QCheckBox(tr("Start with Windows"),behavior);minimizedCheck_=new QCheckBox(tr("Start minimized"),behavior);saveOnExitCheck_=new QCheckBox(tr("Save settings on exit"),behavior);keepaliveCheck_=new QCheckBox(tr("Keepalive for static color"),behavior);restorePowerCheck_=new QCheckBox(tr("Restore powered-on state on startup"),behavior);powerOffOnExitCheck_=new QCheckBox(tr("Turn the strip off on exit"),behavior);powerOffOnShutdownCheck_=new QCheckBox(tr("Turn the strip off when Windows shuts down"),behavior);powerOffOnLockCheck_=new QCheckBox(tr("Turn the strip off when the screen locks or the computer sleeps"),behavior);bv->addWidget(autostartCheck_);bv->addWidget(minimizedCheck_);bv->addWidget(saveOnExitCheck_);bv->addWidget(keepaliveCheck_);bv->addWidget(restorePowerCheck_);bv->addWidget(powerOffOnExitCheck_);bv->addWidget(powerOffOnShutdownCheck_);bv->addWidget(powerOffOnLockCheck_);v->addWidget(behavior);auto* save=new QPushButton(tr("Save settings"),body);save->setProperty("accent",true);save->setMinimumHeight(34);v->addWidget(save);v->addStretch();connect(save,&QPushButton::clicked,this,&MainWindow::saveSettings);return scroll;
 }
 
 void MainWindow::connectSignals()
@@ -180,15 +199,15 @@ void MainWindow::connectSignals()
     connect(screenRefreshButton_,&QPushButton::clicked,this,&MainWindow::refreshScreens);connect(screenCombo_,&QComboBox::currentIndexChanged,this,[this](int i){if(i>=0){settings_.ambiScreen=screenCombo_->currentData().toInt();pushAmbilightSettings();updateAmbilightSummary();}});
     connect(ambiCaptureCombo_,&QComboBox::currentIndexChanged,this,[this](int){if(updating_)return;settings_.ambiCapture=ambiCaptureCombo_->currentData().toString();pushAmbilightSettings();updateAmbilightSummary();store_->save(settings_);});
     connect(applyAddressButton_,&QPushButton::clicked,this,[this]{settings_.address=addressEdit_->text().trimmed();wifi_->setAddress(settings_.address);wifi_->start();setStatus(tr("Address: %1").arg(settings_.address));});connect(scanButton_,&QPushButton::clicked,scanner_,&DeviceScanner::start);connect(scanner_,&DeviceScanner::scanStarted,this,[this]{deviceList_->clear();deviceList_->addItem(tr("Searching for devices…"));scanButton_->setEnabled(false);});connect(scanner_,&DeviceScanner::deviceFound,this,[this](const QString&a,const QString&n){if(deviceList_->count()==1&&!deviceList_->item(0)->data(Qt::UserRole).isValid())deviceList_->clear();auto* item=new QListWidgetItem(QStringLiteral("%1 — %2").arg(n,a),deviceList_);item->setData(Qt::UserRole,a);settings_.lastDevices.removeAll(a);settings_.lastDevices.prepend(a);while(settings_.lastDevices.size()>5)settings_.lastDevices.removeLast();store_->save(settings_);});connect(scanner_,&DeviceScanner::finished,this,[this]{scanButton_->setEnabled(true);if(deviceList_->count()==0)deviceList_->addItem(tr("No devices found"));setStatus(tr("Scanning finished"));});connect(scanner_,&DeviceScanner::error,this,[this](const QString&e){scanButton_->setEnabled(true);setStatus(tr("Scan error: %1").arg(e));});auto useDevice=[this]{auto*i=deviceList_->currentItem();if(i&&i->data(Qt::UserRole).isValid()){addressEdit_->setText(i->data(Qt::UserRole).toString());applyAddressButton_->click();}};connect(useDeviceButton_,&QPushButton::clicked,this,useDevice);connect(deviceList_,&QListWidget::itemDoubleClicked,this,[useDevice](QListWidgetItem*){useDevice();});
-    connect(netIntervalSlider_,&QSlider::valueChanged,this,[this](int v){settings_.netInterval=v/100.0;netIntervalValue_->setText(QStringLiteral("%1 с").arg(settings_.netInterval,0,'f',2));wifi_->setMinimumInterval(settings_.netInterval);});connect(netDedupSlider_,&QSlider::valueChanged,this,[this](int v){settings_.netDedup=v/100.0;netDedupValue_->setText(QStringLiteral("%1 с").arg(settings_.netDedup,0,'f',2));wifi_->setDeduplicationWindow(settings_.netDedup);});connect(smoothingCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.smoothEnabled=v;smoother_->setEnabled(v);tauSlider_->setEnabled(v);});connect(instantColorCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.instantColor=v;colorWheel_->setEmitThrottleEnabled(!v);paletteWheel_->setEmitThrottleEnabled(!v);});connect(tauSlider_,&QSlider::valueChanged,this,[this](int v){settings_.smoothTau=v;tauValue_->setText(QStringLiteral("%1 мс").arg(v));smoother_->setTau(v);});connect(loggingCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.loggingEnabled=v;AppLog::setEnabled(v);});connect(powerOffOnShutdownCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.powerOffOnShutdown=v;if(powerOffOnShutdownAction_){QSignalBlocker b(powerOffOnShutdownAction_);powerOffOnShutdownAction_->setChecked(v);}});connect(openLogButton_,&QPushButton::clicked,this,&MainWindow::openLogWindow);connect(clearLogButton_,&QPushButton::clicked,this,[]{AppLog::clear();});connect(languageCombo_,&QComboBox::currentIndexChanged,this,[this](int){if(updating_)return;const QString code=languageCombo_->currentData().toString();if(code==settings_.language)return;settings_.language=code;store_->save(settings_);QProcess::startDetached(QCoreApplication::applicationFilePath());quitApplication();});
-    connect(wifi_,&WifiManager::statusChanged,this,&MainWindow::setStatus);connect(wifi_,&WifiManager::connectedChanged,this,[this](bool c){const bool reconnect=c&&!connected_;connected_=c;connectionDot_->setStyleSheet(c?"color:#22c55e":"color:#ef4444");connectionDot_->setToolTip(c?tr("Wi-Fi: connected"):tr("Wi-Fi: disconnected"));if(reconnect){if(settings_.restorePower)powerOn_=settings_.lastPowerOn;wifi_->send(powerOn_?protocol::powerOnCommand():protocol::powerOffCommand());if(powerOn_&&settings_.mode!="ambilight")QTimer::singleShot(150,this,[this]{applyEffectState();});}});
+    connect(netIntervalSlider_,&QSlider::valueChanged,this,[this](int v){settings_.netInterval=v/100.0;netIntervalValue_->setText(QStringLiteral("%1 с").arg(settings_.netInterval,0,'f',2));wifi_->setMinimumInterval(settings_.netInterval);});connect(netDedupSlider_,&QSlider::valueChanged,this,[this](int v){settings_.netDedup=v/100.0;netDedupValue_->setText(QStringLiteral("%1 с").arg(settings_.netDedup,0,'f',2));wifi_->setDeduplicationWindow(settings_.netDedup);});connect(smoothingCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.smoothEnabled=v;smoother_->setEnabled(v);tauSlider_->setEnabled(v);});connect(instantColorCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.instantColor=v;colorWheel_->setEmitThrottleEnabled(!v);paletteWheel_->setEmitThrottleEnabled(!v);});connect(tauSlider_,&QSlider::valueChanged,this,[this](int v){settings_.smoothTau=v;tauValue_->setText(QStringLiteral("%1 мс").arg(v));smoother_->setTau(v);});connect(loggingCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.loggingEnabled=v;AppLog::setEnabled(v);});connect(powerOffOnShutdownCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.powerOffOnShutdown=v;if(powerOffOnShutdownAction_){QSignalBlocker b(powerOffOnShutdownAction_);powerOffOnShutdownAction_->setChecked(v);}});connect(powerOffOnLockCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.powerOffOnLock=v;});connect(openLogButton_,&QPushButton::clicked,this,&MainWindow::openLogWindow);connect(clearLogButton_,&QPushButton::clicked,this,[]{AppLog::clear();});connect(languageCombo_,&QComboBox::currentIndexChanged,this,[this](int){if(updating_)return;const QString code=languageCombo_->currentData().toString();if(code==settings_.language)return;settings_.language=code;store_->save(settings_);QProcess::startDetached(QCoreApplication::applicationFilePath());quitApplication();});connect(checkUpdatesCheck_,&QCheckBox::toggled,this,[this](bool v){settings_.checkUpdates=v;store_->save(settings_);});
+    connect(wifi_,&WifiManager::statusChanged,this,&MainWindow::setStatus);connect(wifi_,&WifiManager::connectedChanged,this,[this](bool c){const bool reconnect=c&&!connected_;connected_=c;deviceReachable_=c;updateConnectionIndicator();if(reconnect){if(settings_.restorePower)powerOn_=settings_.lastPowerOn;wifi_->send(powerOn_?protocol::powerOnCommand():protocol::powerOffCommand());if(powerOn_&&settings_.mode!="ambilight")QTimer::singleShot(150,this,[this]{applyEffectState();});}});connect(wifi_,&WifiManager::deviceReachableChanged,this,[this](bool reachable){deviceReachable_=reachable;updateConnectionIndicator();});
     connect(store_,&SettingsStore::error,this,&MainWindow::setStatus);
     connect(popup_,&TrayPopup::colorChanged,this,&MainWindow::setStaticColor);connect(popup_,&TrayPopup::brightnessChanged,brightnessSlider_,&QSlider::setValue);connect(popup_,&TrayPopup::smoothingTauChanged,tauSlider_,&QSlider::setValue);connect(popup_,&TrayPopup::modeChanged,this,[this](const QString&m){setMode(m);});connect(popup_,&TrayPopup::effectChanged,this,&MainWindow::setEffect);connect(popup_,&TrayPopup::powerRequested,this,&MainWindow::setPower);connect(popup_,&TrayPopup::settingsRequested,this,[this]{tabs_->setCurrentIndex(3);showWindow();});connect(popup_,&TrayPopup::windowRequested,this,&MainWindow::showWindow);
 }
 
 void MainWindow::applySettingsToUi()
 {
-    updating_=true;addressEdit_->setText(settings_.address);brightnessSlider_->setValue(settings_.brightness);brightnessValue_->setText(QStringLiteral("%1%").arg(settings_.brightness));modeCombo_->setCurrentIndex(modeCombo_->findData(settings_.mode));effectCombo_->setCurrentIndex(effectCombo_->findData(settings_.effect));speedSlider_->setValue(qRound(settings_.effectSpeed*100));intensitySlider_->setValue(qRound(settings_.effectIntensity*100));noiseSlider_->setValue(qRound(settings_.effectNoise*100));reverseCheck_->setChecked(settings_.effectReverse);colorWheel_->setRgb(settings_.color.red(),settings_.color.green(),settings_.color.blue());paletteWheel_->setRgb(settings_.palette[0].red(),settings_.palette[0].green(),settings_.palette[0].blue());netIntervalSlider_->setValue(qRound(settings_.netInterval*100));netIntervalValue_->setText(QStringLiteral("%1 с").arg(settings_.netInterval,0,'f',2));netDedupSlider_->setValue(qRound(settings_.netDedup*100));netDedupValue_->setText(QStringLiteral("%1 с").arg(settings_.netDedup,0,'f',2));smoothingCheck_->setChecked(settings_.smoothEnabled);tauSlider_->setValue(settings_.smoothTau);tauValue_->setText(QStringLiteral("%1 мс").arg(settings_.smoothTau));tauSlider_->setEnabled(settings_.smoothEnabled);instantColorCheck_->setChecked(settings_.instantColor);colorWheel_->setEmitThrottleEnabled(!settings_.instantColor);paletteWheel_->setEmitThrottleEnabled(!settings_.instantColor);loggingCheck_->setChecked(settings_.loggingEnabled);autostartCheck_->setChecked(settings_.autostart);minimizedCheck_->setChecked(settings_.startMinimized);saveOnExitCheck_->setChecked(settings_.saveOnExit);keepaliveCheck_->setChecked(settings_.keepalive);restorePowerCheck_->setChecked(settings_.restorePower);powerOffOnExitCheck_->setChecked(settings_.powerOffOnExit);powerOffOnShutdownCheck_->setChecked(settings_.powerOffOnShutdown);languageCombo_->setCurrentIndex(languageCombo_->findData(settings_.language));
+    updating_=true;addressEdit_->setText(settings_.address);brightnessSlider_->setValue(settings_.brightness);brightnessValue_->setText(QStringLiteral("%1%").arg(settings_.brightness));modeCombo_->setCurrentIndex(modeCombo_->findData(settings_.mode));effectCombo_->setCurrentIndex(effectCombo_->findData(settings_.effect));speedSlider_->setValue(qRound(settings_.effectSpeed*100));intensitySlider_->setValue(qRound(settings_.effectIntensity*100));noiseSlider_->setValue(qRound(settings_.effectNoise*100));reverseCheck_->setChecked(settings_.effectReverse);colorWheel_->setRgb(settings_.color.red(),settings_.color.green(),settings_.color.blue());paletteWheel_->setRgb(settings_.palette[0].red(),settings_.palette[0].green(),settings_.palette[0].blue());netIntervalSlider_->setValue(qRound(settings_.netInterval*100));netIntervalValue_->setText(QStringLiteral("%1 с").arg(settings_.netInterval,0,'f',2));netDedupSlider_->setValue(qRound(settings_.netDedup*100));netDedupValue_->setText(QStringLiteral("%1 с").arg(settings_.netDedup,0,'f',2));smoothingCheck_->setChecked(settings_.smoothEnabled);tauSlider_->setValue(settings_.smoothTau);tauValue_->setText(QStringLiteral("%1 мс").arg(settings_.smoothTau));tauSlider_->setEnabled(settings_.smoothEnabled);instantColorCheck_->setChecked(settings_.instantColor);colorWheel_->setEmitThrottleEnabled(!settings_.instantColor);paletteWheel_->setEmitThrottleEnabled(!settings_.instantColor);loggingCheck_->setChecked(settings_.loggingEnabled);autostartCheck_->setChecked(settings_.autostart);minimizedCheck_->setChecked(settings_.startMinimized);saveOnExitCheck_->setChecked(settings_.saveOnExit);keepaliveCheck_->setChecked(settings_.keepalive);restorePowerCheck_->setChecked(settings_.restorePower);powerOffOnExitCheck_->setChecked(settings_.powerOffOnExit);powerOffOnShutdownCheck_->setChecked(settings_.powerOffOnShutdown);powerOffOnLockCheck_->setChecked(settings_.powerOffOnLock);languageCombo_->setCurrentIndex(languageCombo_->findData(settings_.language));checkUpdatesCheck_->setChecked(settings_.checkUpdates);
     deviceList_->clear();
     for (const QString& addr : settings_.lastDevices) {
         auto* item = new QListWidgetItem(addr, deviceList_);
@@ -198,17 +217,29 @@ void MainWindow::applySettingsToUi()
     updating_=false;updatePreview(settings_.color);
 }
 
-void MainWindow::collectSettingsFromUi(){settings_.address=addressEdit_->text().trimmed();settings_.language=languageCombo_->currentData().toString();settings_.autostart=autostartCheck_->isChecked();settings_.startMinimized=minimizedCheck_->isChecked();settings_.saveOnExit=saveOnExitCheck_->isChecked();settings_.keepalive=keepaliveCheck_->isChecked();settings_.restorePower=restorePowerCheck_->isChecked();settings_.powerOffOnExit=powerOffOnExitCheck_->isChecked();settings_.powerOffOnShutdown=powerOffOnShutdownCheck_->isChecked();settings_.loggingEnabled=loggingCheck_->isChecked();}
+void MainWindow::collectSettingsFromUi(){settings_.address=addressEdit_->text().trimmed();settings_.language=languageCombo_->currentData().toString();settings_.autostart=autostartCheck_->isChecked();settings_.startMinimized=minimizedCheck_->isChecked();settings_.saveOnExit=saveOnExitCheck_->isChecked();settings_.keepalive=keepaliveCheck_->isChecked();settings_.restorePower=restorePowerCheck_->isChecked();settings_.powerOffOnExit=powerOffOnExitCheck_->isChecked();settings_.powerOffOnShutdown=powerOffOnShutdownCheck_->isChecked();settings_.powerOffOnLock=powerOffOnLockCheck_->isChecked();settings_.loggingEnabled=loggingCheck_->isChecked();settings_.checkUpdates=checkUpdatesCheck_->isChecked();}
 void MainWindow::saveSettings(){collectSettingsFromUi();if(store_->save(settings_))setStatus(tr("Settings saved"));}
-void MainWindow::setStatus(const QString& text){statusLabel_->setText(text);AppLog::logline(text);}
+void MainWindow::setStatus(const QString& text){
+    // Как на макете: подпись «Статус:» приглушённая, само значение — цветом.
+    // Ошибки и отмена — красным, обычные сообщения — фиолетовым.
+    const bool isError = text.contains(QLatin1String("rror")) || text.contains(QLatin1String("ancel"))
+                         || text.contains(QLatin1String("ailed"));
+    const QString color = isError ? QStringLiteral("#ff6b6b") : QStringLiteral("#c79bff");
+    statusLabel_->setText(QStringLiteral("<span style='color:#8a8a99'>%1</span> <span style='color:%2'>%3</span>")
+                              .arg(tr("Status:"), color, text.toHtmlEscaped()));
+    AppLog::logline(text);
+}
+void MainWindow::updateConnectionIndicator(){if(!connectionDot_)return;QString color=QStringLiteral("#ef4444");QString tip=tr("Wi-Fi: disconnected");if(connected_&&deviceReachable_){color=QStringLiteral("#22c55e");tip=tr("Wi-Fi: connected");}else if(connected_){color=QStringLiteral("#f59e0b");tip=tr("The strip is not responding");}connectionDot_->setStyleSheet(QStringLiteral("color:%1").arg(color));connectionDot_->setToolTip(tip);}
 void MainWindow::setMode(const QString& mode,bool immediate){settings_.mode=(mode=="ambilight"?"ambilight":"effect");{QSignalBlocker b(modeCombo_);modeCombo_->setCurrentIndex(modeCombo_->findData(settings_.mode));}if(settings_.mode=="ambilight"){effects_->stop();ambilight_->start();ambilightState_->setText(tr("Ambilight on"));}else{ambilight_->stop();pushEffectSettings();if(protocol::usesBuiltinPattern(settings_.effect)){effects_->stop();applyEffectState();}else{effects_->start();}ambilightState_->setText(tr("Ambilight off"));}if(immediate)setStatus(settings_.mode=="ambilight"?tr("Source: Ambilight"):tr("Source: effects"));}
 void MainWindow::setEffect(const QString& effect){if(!EffectEngine::effects().contains(effect))return;settings_.effect=effect;{QSignalBlocker b(effectCombo_);effectCombo_->setCurrentIndex(effectCombo_->findData(effect));}effectDescription_->setText(EffectEngine::descriptions().value(effect));updatePaletteUi();pushEffectSettings();setMode("effect",false);}
 void MainWindow::applyEffectState(){if(!connected_||!powerOn_||settings_.mode=="ambilight")return;const int code=protocol::builtinPatternCode(settings_.effect);if(code>=0){wifi_->send(protocol::builtinPatternCommand(code,protocol::deviceSpeed(settings_.effectSpeed)));return;}submitGeneratedColor(settings_.color.red(),settings_.color.green(),settings_.color.blue());}
 void MainWindow::pushEffectSettings(){QList<QColor> p;for(int i=0;i<settings_.paletteCount;++i)p<<settings_.palette[i];effects_->setEffect(settings_.effect);effects_->setPalette(p);effects_->setSpeed(settings_.effectSpeed);effects_->setIntensity(settings_.effectIntensity);effects_->setNoise(settings_.effectNoise);effects_->setReverse(settings_.effectReverse);speedValue_->setText(QStringLiteral("%1x").arg(settings_.effectSpeed,0,'f',2));intensityValue_->setText(QStringLiteral("%1%").arg(qRound(settings_.effectIntensity*100)));noiseValue_->setText(QStringLiteral("%1%").arg(qRound(settings_.effectNoise*100)));effectDescription_->setText(EffectEngine::descriptions().value(settings_.effect));}
-void MainWindow::pushAmbilightSettings(){ambilight_->setRegion(settings_.ambiRegion);ambilight_->setBandPct(settings_.ambiBand);ambilight_->setBoost(settings_.ambiBoost);ambilight_->setSmooth(settings_.ambiSmooth);ambilight_->setMinLevel(settings_.ambiMin);ambilight_->setAutoBright(settings_.ambiAuto);ambilight_->setFrequency(settings_.ambiFreq);ambilight_->setScreenIndex(settings_.ambiScreen);ambilight_->setCombine(settings_.ambiCombine);ambilight_->setCustomRect(settings_.ambiRect);ambilight_->setCaptureMode(AmbiLight::captureModeFromString(settings_.ambiCapture));}
+void MainWindow::pushAmbilightSettings(){ambilight_->setRegion(settings_.ambiRegion);ambilight_->setBandPct(settings_.ambiBand);ambilight_->setBoost(settings_.ambiBoost);ambilight_->setSmooth(settings_.ambiSmooth);ambilight_->setMinLevel(settings_.ambiMin);ambilight_->setAutoBright(settings_.ambiAuto);ambilight_->setFrequency(settings_.ambiFreq);ambilight_->setScreenIndex(settings_.ambiScreen);ambilight_->setCombine(settings_.ambiCombine);ambilight_->setCustomRect(settings_.ambiRect);ambilight_->setCaptureMode(AmbiLight::captureModeFromString(settings_.ambiCapture));ambilight_->setZones(settings_.ambiEasy?QVector<CaptureZone>():decodeZones(settings_.ambiZones));}
 void MainWindow::setPower(bool enabled){powerOn_=enabled;settings_.lastPowerOn=enabled;store_->setLastPowerOn(enabled);if(enabled){wifi_->send(protocol::powerOnCommand());if(settings_.mode!="ambilight")QTimer::singleShot(120,this,[this]{applyEffectState();});setStatus(tr("Backlight on"));}else{wifi_->send(protocol::powerOffCommand());smoother_->setCurrent(QColor(0,0,0));currentColor_=QColor(0,0,0);updatePreview(currentColor_);setStatus(tr("Backlight off"));}}
 void MainWindow::setPowerOffOnShutdown(bool enabled){if(settings_.powerOffOnShutdown==enabled)return;settings_.powerOffOnShutdown=enabled;{QSignalBlocker b(powerOffOnShutdownCheck_);powerOffOnShutdownCheck_->setChecked(enabled);}store_->save(settings_);setStatus(enabled?tr("The strip will be turned off when Windows shuts down"):tr("The strip state will be kept when Windows shuts down"));}
 void MainWindow::sendShutdownPowerOff(){if(!settings_.powerOffOnShutdown||!powerOn_||!wifi_)return;wifi_->sendUrgent(protocol::powerOffCommand());}
+void MainWindow::handleSessionAway(const QString& reason){if(!settings_.powerOffOnLock||!powerOn_||!connected_||restoreAfterSession_)return;restoreAfterSession_=true;wifi_->sendUrgent(protocol::powerOffCommand());setStatus(tr("Strip turned off: %1").arg(reason));}
+void MainWindow::handleSessionBack(const QString& reason){if(!restoreAfterSession_||!connected_)return;restoreAfterSession_=false;wifi_->sendUrgent(protocol::powerOnCommand());if(settings_.mode!="ambilight")QTimer::singleShot(150,this,[this]{applyEffectState();});setStatus(tr("Strip turned back on: %1").arg(reason));}
 void MainWindow::submitGeneratedColor(int r,int g,int b){if(!powerOn_||!connected_)return;double k=settings_.brightness/100.0;smoother_->animateTo(qRound(r*k),qRound(g*k),qRound(b*k));}
 void MainWindow::onSmoothedColor(int r,int g,int b){if(!powerOn_||!connected_)return;currentColor_=QColor(r,g,b);if(settings_.effect=="static"&&colorWheel_)colorWheel_->setVisualRgb(r,g,b);updatePreview(currentColor_);wifi_->send(protocol::colorCommand(r,g,b));if(!iconTimer_->isActive())iconTimer_->start();if(popup_->isVisible())popup_->syncState(r,g,b,settings_.brightness,settings_.mode,settings_.effect,settings_.smoothTau);}
 void MainWindow::setStaticColor(int r,int g,int b){if(updating_)return;const bool wasStaticEffect=settings_.mode=="effect"&&settings_.effect=="static";if(!wasStaticEffect){ambilight_->stop();settings_.mode="effect";settings_.effect="static";paletteSlot_=0;updating_=true;modeCombo_->setCurrentIndex(modeCombo_->findData(settings_.mode));effectCombo_->setCurrentIndex(effectCombo_->findData(settings_.effect));paletteWheel_->setRgb(r,g,b);updating_=false;effects_->setEffect("static");pushEffectSettings();effects_->start();updatePaletteUi();}settings_.color=QColor(r,g,b);settings_.palette[0]=settings_.color;effects_->setPalette({settings_.color});submitGeneratedColor(r,g,b);}
@@ -216,15 +247,63 @@ void MainWindow::updatePreview(const QColor& c){hexLabel_->setText(c.name().toUp
 void MainWindow::selectPaletteSlot(int i){if(i<0||i>=settings_.paletteCount)return;paletteSlot_=i;updating_=true;paletteWheel_->setRgb(settings_.palette[i].red(),settings_.palette[i].green(),settings_.palette[i].blue());updating_=false;updatePaletteUi();}
 void MainWindow::updatePaletteUi(){int usage=EffectEngine::paletteUsage().value(settings_.effect,-1);int used=usage<0?settings_.paletteCount:std::min(usage,settings_.paletteCount);for(int i=0;i<4;++i){auto*b=paletteButtons_[i];const bool active=i<settings_.paletteCount;const bool effectUses=active&&i<used;b->setVisible(active);b->setEnabled(effectUses);b->setText(active&&!effectUses?QStringLiteral("×"):QString());b->setProperty("slotActive",i==paletteSlot_&&effectUses);const QColor c=settings_.palette[i];const QString background=effectUses?c.name():QStringLiteral("rgba(%1,%2,%3,90)").arg(c.red()).arg(c.green()).arg(c.blue());b->setStyleSheet(QStringLiteral("QPushButton{background:%1;color:rgba(255,255,255,190);font-size:30px;font-weight:700;border:%2px solid %3;border-radius:10px}QPushButton:disabled{color:rgba(255,255,255,190)}").arg(background).arg(i==paletteSlot_&&effectUses?3:2).arg(i==paletteSlot_&&effectUses?"#b070ff":"#3a3a48"));}paletteActiveLabel_->setText(paletteSlot_==0?tr("Editing: Color 1 (primary)"):tr("Editing: Color %1").arg(paletteSlot_+1));paletteUsageLabel_->setText(usage==0?tr("Rainbow does not use the palette."):tr("Active colors: %1. Current effect uses: %2.").arg(settings_.paletteCount).arg(used));palettePlus_->setEnabled(settings_.paletteCount<4);paletteMinus_->setEnabled(settings_.paletteCount>2);refreshTrayIcon(true);}
 void MainWindow::refreshScreens(){int previous=settings_.ambiScreen;screenCombo_->clear();for(const auto&s:AmbiLight::listScreens())screenCombo_->addItem(QStringLiteral("%1 — %2×%3%4").arg(s.name).arg(s.size.width()).arg(s.size.height()).arg(s.primary?tr(" (primary)"):QString()),s.index);int i=screenCombo_->findData(previous);screenCombo_->setCurrentIndex(i>=0?i:0);}
-void MainWindow::updateAmbilightSummary(){ambilightSummary_->setText(tr("Area: %1\nBand: %2% · boost: %3x · smoothing: %4\nFrequency: %5 Hz · combining: %6\nCapture: %7").arg(AmbiLight::regions().value(settings_.ambiRegion,settings_.ambiRegion)).arg(settings_.ambiBand).arg(settings_.ambiBoost,0,'f',1).arg(settings_.ambiSmooth,0,'f',2).arg(settings_.ambiFreq,0,'f',1).arg(AmbiLight::combineModes().value(settings_.ambiCombine,settings_.ambiCombine)).arg(AmbiLight::captureModeName(AmbiLight::captureModeFromString(settings_.ambiCapture))));}
+void MainWindow::updateAmbilightSummary(){const int zoneCount=settings_.ambiEasy?0:decodeZones(settings_.ambiZones).size();const QString area=zoneCount>0?tr("Custom zones: %1").arg(zoneCount):AmbiLight::regions().value(settings_.ambiRegion,settings_.ambiRegion);ambilightSummary_->setText(tr("Area: %1\nBand: %2% · boost: %3x · smoothing: %4\nFrequency: %5 Hz · combining: %6\nCapture: %7").arg(area).arg(settings_.ambiBand).arg(settings_.ambiBoost,0,'f',1).arg(settings_.ambiSmooth,0,'f',2).arg(settings_.ambiFreq,0,'f',1).arg(AmbiLight::combineModes().value(settings_.ambiCombine,settings_.ambiCombine)).arg(AmbiLight::captureModeName(AmbiLight::captureModeFromString(settings_.ambiCapture))));}
 void MainWindow::runSmoothTest(){smoothTestPrevMode_=settings_.mode;smoothTestPrevEffect_=settings_.effect;setEffect("static");effects_->stop();smoothTestColors_.clear();for(int i=0;i<settings_.paletteCount;++i)smoothTestColors_<<settings_.palette[i];for(int i=0;i<8;++i)smoothTestColors_<<QColor::fromHsv(i*45,255,255);smoothTestColors_<<settings_.palette[0];smoothTestIndex_=0;smoothTestTimer_->start();smoothTestStep();}
 void MainWindow::smoothTestStep(){if(smoothTestIndex_>=smoothTestColors_.size()){smoothTestTimer_->stop();effects_->stop();if(smoothTestPrevMode_=="ambilight"){setMode("ambilight",false);}else{setEffect(smoothTestPrevEffect_);}setStatus(tr("Smoothness test finished"));return;}const QColor c=smoothTestColors_[smoothTestIndex_++];submitGeneratedColor(c.red(),c.green(),c.blue());setStatus(tr("Smoothness test… (%1/%2)").arg(smoothTestIndex_).arg(smoothTestColors_.size()));}
 
-void MainWindow::setupTray(){tray_=new QSystemTrayIcon(IconFactory::appIcon(64),this);tray_->setToolTip(QString::fromLatin1(config::ApplicationName));auto* menu=new QMenu(this);menu->addAction(tr("Open window"),this,&MainWindow::showWindow);menu->addAction(tr("🎨 Quick settings"),this,&MainWindow::showPopup);menu->addSeparator();menu->addAction(tr("Turn backlight on"),this,[this]{setPower(true);});menu->addAction(tr("Turn backlight off"),this,[this]{setPower(false);});powerOffOnShutdownAction_=menu->addAction(tr("Turn off when Windows shuts down"));powerOffOnShutdownAction_->setCheckable(true);powerOffOnShutdownAction_->setChecked(settings_.powerOffOnShutdown);connect(powerOffOnShutdownAction_,&QAction::toggled,this,&MainWindow::setPowerOffOnShutdown);menu->addAction(tr("▶ Smoothness test"),this,&MainWindow::runSmoothTest);menu->addSeparator();menu->addAction(tr("Open log"),this,&MainWindow::openLogWindow);menu->addAction(tr("Settings…"),this,[this]{tabs_->setCurrentIndex(3);showWindow();});menu->addSeparator();menu->addAction(tr("Exit"),this,&MainWindow::quitApplication);tray_->setContextMenu(menu);clickTimer_=new QTimer(this);clickTimer_->setSingleShot(true);clickTimer_->setInterval(QApplication::doubleClickInterval());connect(clickTimer_,&QTimer::timeout,this,&MainWindow::showPopup);connect(tray_,&QSystemTrayIcon::activated,this,[this](QSystemTrayIcon::ActivationReason reason){if(reason==QSystemTrayIcon::Trigger)clickTimer_->start();else if(reason==QSystemTrayIcon::DoubleClick){clickTimer_->stop();showWindow();}});tray_->show();}
+void MainWindow::setupTray(){tray_=new QSystemTrayIcon(IconFactory::appIcon(64),this);tray_->setToolTip(QString::fromLatin1(config::ApplicationName));auto* menu=new QMenu(this);menu->addAction(tr("Open window"),this,&MainWindow::showWindow);menu->addAction(tr("🎨 Quick settings"),this,&MainWindow::showPopup);menu->addSeparator();menu->addAction(tr("Turn backlight on"),this,[this]{setPower(true);});menu->addAction(tr("Turn backlight off"),this,[this]{setPower(false);});powerOffOnShutdownAction_=menu->addAction(tr("Turn off when Windows shuts down"));powerOffOnShutdownAction_->setCheckable(true);powerOffOnShutdownAction_->setChecked(settings_.powerOffOnShutdown);connect(powerOffOnShutdownAction_,&QAction::toggled,this,&MainWindow::setPowerOffOnShutdown);menu->addAction(tr("Check for updates…"),this,[this]{updater_->check();});menu->addAction(tr("▶ Smoothness test"),this,&MainWindow::runSmoothTest);menu->addSeparator();menu->addAction(tr("Open log"),this,&MainWindow::openLogWindow);menu->addAction(tr("Settings…"),this,[this]{tabs_->setCurrentIndex(3);showWindow();});menu->addSeparator();menu->addAction(tr("Exit"),this,&MainWindow::quitApplication);tray_->setContextMenu(menu);clickTimer_=new QTimer(this);clickTimer_->setSingleShot(true);clickTimer_->setInterval(QApplication::doubleClickInterval());connect(clickTimer_,&QTimer::timeout,this,&MainWindow::showPopup);connect(tray_,&QSystemTrayIcon::activated,this,[this](QSystemTrayIcon::ActivationReason reason){if(reason==QSystemTrayIcon::Trigger)clickTimer_->start();else if(reason==QSystemTrayIcon::DoubleClick){clickTimer_->stop();showWindow();}});tray_->show();}
 void MainWindow::showWindow(){showNormal();raise();activateWindow();}
 void MainWindow::showPopup(){if(popup_->isVisible()){popup_->hide();return;}popup_->syncState(currentColor_.red(),currentColor_.green(),currentColor_.blue(),settings_.brightness,settings_.mode,settings_.effect,settings_.smoothTau);popup_->adjustSize();QPoint p=QCursor::pos();QScreen*s=QApplication::screenAt(p);if(!s)s=QApplication::primaryScreen();QRect g=s->availableGeometry();int x=std::clamp(p.x()-popup_->width()/2,g.left()+8,g.right()-popup_->width()-8);int y=p.y()-popup_->height()-12;if(y<g.top()+8)y=p.y()+12;popup_->move(x,y);popup_->show();}
 void MainWindow::refreshTrayIcon(bool force){if(settings_.mode=="ambilight"){const QString key=QStringLiteral("ambilight/hsv");if(!force&&key==trayIconKey_)return;trayIconKey_=key;tray_->setIcon(IconFactory::rainbowIcon(64,false));return;}const int redBucket=currentColor_.red()/16;const int greenBucket=currentColor_.green()/16;const int blueBucket=currentColor_.blue()/16;QString key=QStringLiteral("%1/%2/%3/%4/%5").arg(settings_.mode,settings_.effect).arg(redBucket).arg(greenBucket).arg(blueBucket);if(!force&&key==trayIconKey_)return;trayIconKey_=key;tray_->setIcon(IconFactory::trayIcon(currentColor_,settings_.palette.mid(0,settings_.paletteCount),settings_.effect));}
 void MainWindow::openLogWindow(){if(!logWindow_)logWindow_=new LogWindow(this);logWindow_->show();logWindow_->raise();logWindow_->activateWindow();}
+
+void MainWindow::setupUpdater()
+{
+    updater_=new UpdateChecker(this);
+    connect(checkUpdatesButton_,&QPushButton::clicked,this,[this]{updater_->check();});
+    connect(updater_,&UpdateChecker::checkStarted,this,[this]{setStatus(tr("Checking for updates…"));});
+    connect(updater_,&UpdateChecker::upToDate,this,[this](const QString& v){setStatus(tr("You are using the latest version (%1)").arg(v));});
+    connect(updater_,&UpdateChecker::updateAvailable,this,&MainWindow::showUpdateAvailable);
+    connect(updater_,&UpdateChecker::downloadProgress,this,[this](qint64 received,qint64 total){
+        updateProgress_->setVisible(true);
+        if(total>0){updateProgress_->setMaximum(int(total/1024));updateProgress_->setValue(int(received/1024));}
+        else{updateProgress_->setMaximum(0);updateProgress_->setValue(0);}
+    });
+    connect(updater_,&UpdateChecker::updateReady,this,&MainWindow::installUpdate);
+    connect(updater_,&UpdateChecker::failed,this,[this](const QString& m){updateProgress_->setVisible(false);setStatus(m);});
+    if(settings_.checkUpdates)QTimer::singleShot(3000,this,[this]{updater_->check();});
+}
+
+void MainWindow::showUpdateAvailable(const QString& version,const QUrl& pageUrl,const QString& notes)
+{
+    if(version==settings_.skippedVersion){setStatus(tr("Version %1 is available (skipped)").arg(version));return;}
+    QMessageBox box(this);box.setIcon(QMessageBox::Information);box.setWindowTitle(tr("Update available"));
+    box.setText(tr("Version %1 is ready to install.").arg(version));
+    box.setInformativeText(notes.isEmpty()?tr("The installer will be downloaded, then the program will close and update itself."):notes.left(500));
+    QPushButton* installButton=box.addButton(tr("Download and install"),QMessageBox::AcceptRole);
+    box.addButton(tr("Later"),QMessageBox::RejectRole);
+    QPushButton* skipButton=box.addButton(tr("Skip this version"),QMessageBox::ActionRole);
+    QPushButton* pageButton=box.addButton(tr("Open release page"),QMessageBox::ActionRole);
+    box.setDefaultButton(installButton);box.exec();
+    if(box.clickedButton()==installButton){setStatus(tr("Downloading version %1…").arg(version));updater_->download(version);}
+    else if(box.clickedButton()==skipButton){settings_.skippedVersion=version;store_->save(settings_);setStatus(tr("Version %1 will not be suggested again").arg(version));}
+    else if(box.clickedButton()==pageButton){QDesktopServices::openUrl(pageUrl);}
+}
+
+void MainWindow::installUpdate(const QString& installerPath,const QString& version)
+{
+    updateProgress_->setVisible(false);
+    const QMessageBox::StandardButton answer=QMessageBox::question(this,tr("Update ready"),
+        tr("Version %1 is downloaded. Install it now? The program will close and reopen.").arg(version),
+        QMessageBox::Yes|QMessageBox::No,QMessageBox::Yes);
+    if(answer!=QMessageBox::Yes){setStatus(tr("Update %1 is ready to install").arg(version));return;}
+    const QStringList arguments{QStringLiteral("/VERYSILENT"),QStringLiteral("/SUPPRESSMSGBOXES"),QStringLiteral("/NORESTART"),QStringLiteral("/CLOSEAPPLICATIONS")};
+    if(!QProcess::startDetached(installerPath,arguments)){
+        QMessageBox::warning(this,tr("Update"),tr("Cannot start the installer. Run it manually: %1").arg(installerPath));
+        return;
+    }
+    QTimer::singleShot(700,this,&MainWindow::quitApplication);
+}
 void MainWindow::closeEvent(QCloseEvent* e){if(!quitting_&&tray_&&tray_->isVisible()){e->ignore();hide();tray_->showMessage(QString::fromLatin1(config::ApplicationName),tr("Application minimized to tray"),QSystemTrayIcon::Information,1500);}else e->accept();}
 void MainWindow::quitApplication(){if(quitting_)return;quitting_=true;collectSettingsFromUi();settings_.lastPowerOn=powerOn_;if(settings_.saveOnExit)store_->save(settings_);if(settings_.powerOffOnExit&&powerOn_)wifi_->sendBlocking(protocol::powerOffCommand());effects_->stop();ambilight_->stop();smoother_->setEnabled(false);wifi_->stop();tray_->hide();QApplication::quit();}
 

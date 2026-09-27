@@ -4,6 +4,7 @@
 
 #include <QColor>
 #include <QMainWindow>
+#include <QUrl>
 #include <QVector>
 
 class QAction;
@@ -13,6 +14,7 @@ class QComboBox;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QProgressBar;
 class QPushButton;
 class QSlider;
 class QSystemTrayIcon;
@@ -28,9 +30,10 @@ class ColorWheel;
 class DeviceScanner;
 class EffectEngine;
 class LogWindow;
-class SessionShutdownFilter;
 class SettingsStore;
+class SystemSessionFilter;
 class TrayPopup;
+class UpdateChecker;
 class WifiManager;
 
 class MainWindow final : public QMainWindow
@@ -54,12 +57,15 @@ private:
     void collectSettingsFromUi();
     void saveSettings();
     void setStatus(const QString& text);
+    void updateConnectionIndicator();
     void setMode(const QString& mode, bool immediate = true);
     void setEffect(const QString& effect);
     void applyEffectState();
     void setPower(bool enabled);
     void setPowerOffOnShutdown(bool enabled);
     void sendShutdownPowerOff();
+    void handleSessionAway(const QString& reason);
+    void handleSessionBack(const QString& reason);
     void submitGeneratedColor(int red, int green, int blue);
     void onSmoothedColor(int red, int green, int blue);
     void setStaticColor(int red, int green, int blue);
@@ -77,6 +83,9 @@ private:
     void refreshTrayIcon(bool force = false);
     void quitApplication();
     void openLogWindow();
+    void setupUpdater();
+    void showUpdateAvailable(const QString& version, const QUrl& pageUrl, const QString& notes);
+    void installUpdate(const QString& installerPath, const QString& version);
 
     SettingsStore* store_ = nullptr;
     WifiManager* wifi_ = nullptr;
@@ -87,7 +96,8 @@ private:
     TrayPopup* popup_ = nullptr;
     LogWindow* logWindow_ = nullptr;
     AmbiEditor* ambiEditor_ = nullptr;
-    SessionShutdownFilter* shutdownFilter_ = nullptr;
+    SystemSessionFilter* sessionFilter_ = nullptr;
+    UpdateChecker* updater_ = nullptr;
     AppSettings settings_;
 
     QTabWidget* tabs_ = nullptr;
@@ -147,7 +157,13 @@ private:
     QCheckBox* restorePowerCheck_ = nullptr;
     QCheckBox* powerOffOnExitCheck_ = nullptr;
     QCheckBox* powerOffOnShutdownCheck_ = nullptr;
+    QCheckBox* powerOffOnLockCheck_ = nullptr;
+    bool restoreAfterSession_ = false;
     QAction* powerOffOnShutdownAction_ = nullptr;
+    QCheckBox* checkUpdatesCheck_ = nullptr;
+    QPushButton* checkUpdatesButton_ = nullptr;
+    QProgressBar* updateProgress_ = nullptr;
+    QLabel* versionLabel_ = nullptr;
     QComboBox* languageCombo_ = nullptr;
 
     QSystemTrayIcon* tray_ = nullptr;
@@ -165,6 +181,7 @@ private:
     bool updating_ = false;
     bool quitting_ = false;
     bool connected_ = false;
+    bool deviceReachable_ = false;
     QString trayIconKey_;
 };
 

@@ -1,5 +1,6 @@
 #include "SettingsStore.h"
 
+#include "CaptureZone.h"
 #include "protocol.h"
 
 #include <QAbstractSocket>
@@ -159,6 +160,10 @@ AppSettings SettingsStore::load() const
     value.ambiCapture = settings_->value(QStringLiteral("ambi_capture"), QStringLiteral("auto")).toString();
     value.ambiRect = decodeRect(settings_->value(QStringLiteral("ambi_rect"),
                                                   QStringLiteral("0.0,0.0,1.0,0.1")).toString());
+    value.ambiZones = settings_->value(QStringLiteral("ambi_zones")).toString();
+    value.ambiEasy = settings_->value(QStringLiteral("ambi_easy"), true).toBool();
+    if (!value.ambiZones.isEmpty() && decodeZones(value.ambiZones).isEmpty())
+        value.ambiZones.clear(); // битая разметка не должна ломать захват
 
     value.netInterval = settings_->value(QStringLiteral("net_interval"), 0.0).toDouble();
     value.netDedup = settings_->value(QStringLiteral("net_dedup"),
@@ -168,10 +173,13 @@ AppSettings SettingsStore::load() const
     value.lastPowerOn = settings_->value(QStringLiteral("power_on"), false).toBool();
     value.powerOffOnExit = settings_->value(QStringLiteral("power_off_on_exit"), false).toBool();
     value.powerOffOnShutdown = settings_->value(QStringLiteral("power_off_on_shutdown"), false).toBool();
+    value.powerOffOnLock = settings_->value(QStringLiteral("power_off_on_lock"), false).toBool();
     value.smoothEnabled = settings_->value(QStringLiteral("smooth_enabled"), true).toBool();
     value.smoothTau = settings_->value(QStringLiteral("smooth_tau"), 200).toInt();
     value.instantColor = settings_->value(QStringLiteral("instant_color"), false).toBool();
     value.loggingEnabled = settings_->value(QStringLiteral("logging_enabled"), true).toBool();
+    value.checkUpdates = settings_->value(QStringLiteral("check_updates"), true).toBool();
+    value.skippedVersion = settings_->value(QStringLiteral("skipped_version")).toString();
     value.autostart = settings_->value(QStringLiteral("autostart"), false).toBool();
     value.startMinimized = settings_->value(QStringLiteral("start_minimized"), false).toBool();
     value.saveOnExit = settings_->value(QStringLiteral("save_on_exit"), true).toBool();
@@ -210,6 +218,8 @@ bool SettingsStore::save(const AppSettings& input)
                         QStringLiteral("%1,%2,%3,%4")
                             .arg(value.ambiRect.x()).arg(value.ambiRect.y())
                             .arg(value.ambiRect.width()).arg(value.ambiRect.height()));
+    settings_->setValue(QStringLiteral("ambi_zones"), value.ambiZones);
+    settings_->setValue(QStringLiteral("ambi_easy"), value.ambiEasy);
     settings_->setValue(QStringLiteral("net_interval"), value.netInterval);
     settings_->setValue(QStringLiteral("net_dedup"), value.netDedup);
     settings_->setValue(QStringLiteral("last_devices"), value.lastDevices);
@@ -217,10 +227,13 @@ bool SettingsStore::save(const AppSettings& input)
     settings_->setValue(QStringLiteral("power_on"), value.lastPowerOn);
     settings_->setValue(QStringLiteral("power_off_on_exit"), value.powerOffOnExit);
     settings_->setValue(QStringLiteral("power_off_on_shutdown"), value.powerOffOnShutdown);
+    settings_->setValue(QStringLiteral("power_off_on_lock"), value.powerOffOnLock);
     settings_->setValue(QStringLiteral("smooth_enabled"), value.smoothEnabled);
     settings_->setValue(QStringLiteral("smooth_tau"), value.smoothTau);
     settings_->setValue(QStringLiteral("instant_color"), value.instantColor);
     settings_->setValue(QStringLiteral("logging_enabled"), value.loggingEnabled);
+    settings_->setValue(QStringLiteral("check_updates"), value.checkUpdates);
+    settings_->setValue(QStringLiteral("skipped_version"), value.skippedVersion);
     settings_->setValue(QStringLiteral("autostart"), value.autostart);
     settings_->setValue(QStringLiteral("start_minimized"), value.startMinimized);
     settings_->setValue(QStringLiteral("save_on_exit"), value.saveOnExit);
@@ -342,7 +355,7 @@ AppSettings SettingsStore::validated(const AppSettings& input)
     }
     value.ambiRect = decodeRect(QStringLiteral("%1,%2,%3,%4")
                                     .arg(value.ambiRect.x()).arg(value.ambiRect.y())
-                                    .arg(value.ambiRect.width()).arg(value.ambiRect.height()));
+                            .arg(value.ambiRect.width()).arg(value.ambiRect.height()));
     if (value.ambiCapture != QStringLiteral("auto")
         && value.ambiCapture != QStringLiteral("dxgi")
         && value.ambiCapture != QStringLiteral("gdi")

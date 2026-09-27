@@ -48,6 +48,7 @@ jobs:
           Copy-Item package/* dist-cpp -Recurse -Force
           New-Item -ItemType Directory -Force dist-cpp/translations | Out-Null
           Copy-Item translations/magic_home_controller_ru.qm dist-cpp/translations/magic_home_controller_ru.qm
+          Copy-Item translations/magic_home_controller_en.qm dist-cpp/translations/magic_home_controller_en.qm
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup 6 not found: $iscc" }
           & $iscc "/DAppVersion=$version" installer.iss

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QSize>
 #include <QRect>
 #include <memory>
@@ -33,6 +34,7 @@ public:
     bool frameAvailable() override;
 
     QColor sampleArea(const QRect& area) const override;
+    QColor sampleMask(const QRect& area, const QImage& mask) const override;
 
     void releaseFrame() override;
     void shutdown() noexcept override;

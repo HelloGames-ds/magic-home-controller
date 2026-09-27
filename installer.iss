@@ -1,4 +1,7 @@
 [Setup]
+; Тестовая сборка: ставится в папку на рабочем столе обычным пользователем,
+; поэтому запроса прав администратора (UAC) не появляется. Основная программа
+; в Program Files не трогается.
 AppId={{D91DC516-9175-4D87-9AB2-D42315583581}
 AppName=Magic Home Controller
 #ifndef AppVersion
@@ -17,9 +20,9 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
+ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile=LICENSE
 CloseApplications=yes
 RestartApplications=no

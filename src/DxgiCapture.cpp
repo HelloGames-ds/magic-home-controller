@@ -13,6 +13,8 @@
 #include <d3d11.h>
 #include <dxgi1_2.h>
 
+#include "MaskedSampling.h"
+
 using Microsoft::WRL::ComPtr;
 
 namespace elkbledom {
@@ -270,6 +272,34 @@ QColor DxgiCapture::sampleArea(const QRect& area) const
         return QColor();
     }
     return QColor(int(rr / n), int(gg / n), int(bb / n));
+}
+
+QColor DxgiCapture::sampleMask(const QRect& area, const QImage& mask) const
+{
+    if (!impl_ || !impl_->mappedValid) {
+        return QColor();
+    }
+
+    const int width = static_cast<int>(impl_->desc.ModeDesc.Width);
+    const int height = static_cast<int>(impl_->desc.ModeDesc.Height);
+    const int pitch = static_cast<int>(impl_->mapped.Pitch);
+
+    const int x0 = qBound(0, area.x(), qMax(0, width - 1));
+    const int y0 = qBound(0, area.y(), qMax(0, height - 1));
+    const int x1 = qBound(0, area.x() + area.width(), qMax(0, width - 1));
+    const int y1 = qBound(0, area.y() + area.height(), qMax(0, height - 1));
+    if (x1 <= x0 || y1 <= y0) {
+        return QColor();
+    }
+
+    // В 10-битном HDR-формате усреднение по маске не реализовано: там берём
+    // весь прямоугольник, как и в sampleArea.
+    if (impl_->desc.ModeDesc.Format == DXGI_FORMAT_R10G10B10A2_UNORM) {
+        return average10(impl_->mapped, pitch, x0, y0, x1 - x0, y1 - y0);
+    }
+
+    return averageBgraMasked(impl_->mapped.pBits, pitch,
+                             QRect(x0, y0, x1 - x0, y1 - y0), mask);
 }
 
 void DxgiCapture::releaseFrame()

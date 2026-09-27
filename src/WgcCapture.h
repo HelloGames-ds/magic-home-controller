@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QRect>
 #include <QSize>
 #include <QString>
@@ -31,6 +32,7 @@ public:
     QSize size() const noexcept override;
     bool frameAvailable() override;
     QColor sampleArea(const QRect& area) const override;
+    QColor sampleMask(const QRect& area, const QImage& mask) const override;
     void releaseFrame() override;
     void shutdown() noexcept override;
 

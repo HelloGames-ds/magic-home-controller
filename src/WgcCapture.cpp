@@ -18,6 +18,8 @@
 #include <windows.graphics.directx.direct3d11.interop.h>
 #include <Windows.Graphics.Capture.Interop.h>
 
+#include "MaskedSampling.h"
+
 namespace wgc = winrt::Windows::Graphics::Capture;
 namespace wd3d = winrt::Windows::Graphics::DirectX::Direct3D11;
 using DxgiAccess = ::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess;
@@ -366,6 +368,31 @@ QColor WgcCapture::sampleArea(const QRect& area) const
         return average10(impl_->mapped, pitch, x0, y0, x1 - x0, y1 - y0);
     }
     return averageBgra(impl_->mapped, pitch, x0, y0, x1 - x0, y1 - y0);
+}
+
+QColor WgcCapture::sampleMask(const QRect& area, const QImage& mask) const
+{
+    if (!impl_ || !impl_->mappedValid || !impl_->mappedSurface) {
+        return QColor();
+    }
+
+    const int width = impl_->captureSize.width();
+    const int height = impl_->captureSize.height();
+    const int pitch = static_cast<int>(impl_->mapped.Pitch);
+
+    const int x0 = qBound(0, area.x(), qMax(0, width - 1));
+    const int y0 = qBound(0, area.y(), qMax(0, height - 1));
+    const int x1 = qBound(0, area.x() + area.width(), qMax(0, width - 1));
+    const int y1 = qBound(0, area.y() + area.height(), qMax(0, height - 1));
+    if (x1 <= x0 || y1 <= y0) {
+        return QColor();
+    }
+
+    if (impl_->format == DXGI_FORMAT_R10G10B10A2_UNORM) {
+        return average10(impl_->mapped, pitch, x0, y0, x1 - x0, y1 - y0);
+    }
+    return averageBgraMasked(impl_->mapped.pBits, pitch,
+                             QRect(x0, y0, x1 - x0, y1 - y0), mask);
 }
 
 void WgcCapture::releaseFrame()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QRect>
 #include <QSize>
 #include <QString>
@@ -27,6 +28,12 @@ public:
     // Averages the given physical-pixel area of the retained frame.
     // Returns an invalid QColor if no frame is acquired or on bad format.
     virtual QColor sampleArea(const QRect& area) const = 0;
+
+    // Averages the same 8×8 sample grid, but keeps only the points covered by
+    // mask (Format_Alpha8, same size as area, non-zero = inside the zone).
+    // This is what polygon zones use. The default implementation ignores the
+    // mask, so backends without mask support still return a usable color.
+    virtual QColor sampleMask(const QRect& area, const QImage& mask) const;
 
     virtual void releaseFrame() = 0;
 

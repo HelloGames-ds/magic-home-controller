@@ -19,10 +19,13 @@ if exist dist-cpp rmdir /s /q dist-cpp
 
 mkdir dist-cpp
 copy /y "build-release\Magic-Home-Controller.exe" "dist-cpp\Magic-Home-Controller.exe" >nul || exit /b 1
+rem .pdb нужен, чтобы crash.log содержал имена функций, а не адреса
+copy /y "build-release\Magic-Home-Controller.pdb" "dist-cpp\Magic-Home-Controller.pdb" >nul 2>&1
 "%QT_ROOT%\bin\windeployqt.exe" --release --compiler-runtime "dist-cpp\Magic-Home-Controller.exe" || exit /b 1
 
 if not exist "dist-cpp\translations" mkdir "dist-cpp\translations"
 copy /y "translations\magic_home_controller_ru.qm" "dist-cpp\translations\magic_home_controller_ru.qm" >nul || exit /b 1
+copy /y "translations\magic_home_controller_en.qm" "dist-cpp\translations\magic_home_controller_en.qm" >nul || exit /b 1
 if not exist "dist-cpp\translations\qtbase_ru.qm" copy /y "C:\Qt\6.8.3\msvc2022_64\translations\qtbase_ru.qm" "dist-cpp\translations\qtbase_ru.qm" >nul 2>&1
 
 echo Release package: %CD%\dist-cpp\Magic-Home-Controller.exe

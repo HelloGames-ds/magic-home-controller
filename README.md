@@ -18,8 +18,30 @@
 - HSV color wheel, brightness, smooth transitions, and editable palettes of two to four colors
 - Ambilight screen capture with monitor, region, and capture-backend selection (WGC, DXGI, GDI with automatic switching)
 - 11 effects and 13 capture regions including grids and a custom rectangle
+- **Two capture editors:**
+  - **Simple** — ready-made regions and global sliders
+  - **Advanced** — your own layers, drawn with rectangle, move and hand tools
+- **Per-layer adjustments:** share (weight), brightness, saturation, smoothing, and RGB/R/G/B curves with a histogram
+- Layer cut-outs (subtract areas) with their own masks
+- Undo/redo history of the layer stack
+- The resulting colour is shown live: the colour of the selected layer on the left, the combined colour on the right
 - System tray, quick-settings popup, and diagnostic log window
-- Persistent settings and optional Windows startup
+- Crash log with a symbolised call stack (`crash.log`)
+- Persistent settings, two languages, and optional Windows startup
+
+### Ambilight layers
+
+The Advanced tab lets you build the capture area out of layers. Each layer has its own areas,
+optional cut-outs, and adjustments. Two colours are shown at the bottom of the panel:
+
+- **left** — the colour of the selected layer on its own;
+- **right** — the colour the strip will actually receive, with all enabled layers mixed by their share.
+
+Curves are applied per channel after brightness and saturation, and before the layers are mixed,
+the same way Photoshop applies its adjustment layers. Curve points are stored with the layer,
+so they survive a restart.
+
+---
 
 ### Effects
 
@@ -66,7 +88,7 @@
 ## Installation
 
 1. Open the [**Releases**](https://github.com/HelloGames-ds/magic-home-controller/releases/latest) page.
-2. [**Download the latest version**](https://github.com/HelloGames-ds/magic-home-controller/releases/latest) — the `Magic-Home-Controller-Setup-1.0-x64.exe` installer.
+2. [**Download the latest version**](https://github.com/HelloGames-ds/magic-home-controller/releases/latest) — the `Magic-Home-Controller-Setup-<version>-x64.exe` installer.
 3. Run the installer and accept the Windows UAC prompt.
 4. Launch **Magic Home Controller** from the Start menu or the desktop shortcut.
 
@@ -110,10 +132,10 @@ The result is written to `dist-cpp\`.
 Build the Windows installer:
 
 ```bat
-build-installer.cmd
+build-installer.cmd 1.2
 ```
 
-The installer is written to `installer-output\Magic-Home-Controller-Setup-1.0-x64.exe`.
+The installer is written to `installer-output\Magic-Home-Controller-Setup-<version>-x64.exe`.
 
 ---
 
@@ -123,6 +145,7 @@ Settings and logs are stored in `%APPDATA%\Magic Home Controller`:
 
 - `config.ini` — settings
 - `last.log` — diagnostic log
+- `crash.log` — crash reports with a symbolised call stack (written only when the application crashes)
 
 These are per-user and not stored in the installation directory.
 
