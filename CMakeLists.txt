@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(MagicHomeController
-    VERSION 1.2
+    VERSION 1.2.1
     DESCRIPTION "Magic Home LED Controller"
     LANGUAGES CXX
 )
@@ -67,6 +67,8 @@ qt_add_executable(MagicHomeController WIN32
     src/WgcCapture.cpp
     src/WgcCapture.h
     src/AmbiEditor.cpp
+  src/AmbiEditorPanels.cpp
+  src/AmbiEditorWidgets.h
     src/AmbiEditor.h
     src/AmbiCanvas.cpp
     src/AmbiCanvas.h
