@@ -77,6 +77,10 @@ jobs:
     runs-on: windows-2022
     permissions:
       contents: write
+      # Нужны для actions/attest-build-provenance: подпись provenance
+      # выпускается через OIDC-токен, а сам attestation пишется отдельным API.
+      id-token: write
+      attestations: write
     steps:
       # Нужен именно здесь: `gh release create --generate-notes` собирает
       # заметки из истории git, а без checkout репозитория падал с
@@ -91,6 +95,14 @@ jobs:
           name: Magic-Home-Controller-installer
           path: installer-output
 
+      # Связывает установщик с коммитом и workflow, из которого он собран.
+      # Подпись тега этого не покрывает: тег говорит, кто выпустил релиз,
+      # а attestation — откуда именно взят .exe.
+      - name: Attest installer provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: installer-output/*.exe
+
       - name: Create GitHub release
         shell: pwsh
         env:
@@ -101,3 +113,15 @@ jobs:
           $assets = @(Get-ChildItem installer-output/*.exe | ForEach-Object { $_.FullName })
           if ($assets.Count -eq 0) { throw "No installer assets found" }
           gh release create $tag @assets --generate-notes --title "Magic Home Controller $version"
+
+      - name: Show verification summary
+        if: always()
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem installer-output/*.exe | Select-Object -First 1
+          if (-not $exe) { Write-Host "No installer to summarise"; exit 0 }
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe.FullName).Hash.ToLower()
+          Write-Host "Installer: $($exe.Name)"
+          Write-Host "SHA256:    $hash"
+          $att = gh attestation verify $exe.FullName --repo $env:GITHUB_REPOSITORY 2>&1
+          Write-Host $att
