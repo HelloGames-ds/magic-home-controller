@@ -67,7 +67,7 @@
 <table align="center">
   <tr>
     <td valign="top"><img src="screenshots/ru/main_screen_ru.png" width="280" alt="Главный экран"></td>
-    <td valign="top"><img src="screenshots/ru/effect_ru.png" width="280" alt="Эффекты"></td>
+    <td valign="top"><img src="screenshots/ru/effects_ru.png" width="280" alt="Эффекты"></td>
     <td valign="top"><img src="screenshots/ru/settings_ru.png" width="280" alt="Настройки"></td>
   </tr>
 </table>
@@ -75,7 +75,11 @@
 <table align="center">
   <tr>
     <td valign="top"><img src="screenshots/ru/ambi_main_ru.png" width="280" alt="Ambilight"></td>
-    <td valign="top"><img src="screenshots/ru/ambi_edit_ru.png" width="580" alt="Редактор Ambilight"></td>
+    <td valign="top"><img src="screenshots/ru/ambi_edit_easy_ru.png" width="580" alt="Редактор Ambilight, простой режим"></td>
+  </tr>
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><img src="screenshots/ru/ambi_edit_advanced_ru.png" width="580" alt="Редактор Ambilight, расширенный режим"></td>
   </tr>
 </table>
 

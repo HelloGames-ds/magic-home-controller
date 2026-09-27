@@ -74,7 +74,11 @@ so they survive a restart.
 <table align="center">
   <tr>
     <td valign="top"><img src="screenshots/en/ambi_main_en.png" width="280" alt="Ambilight"></td>
-    <td valign="top"><img src="screenshots/en/ambi_edit_en.png" width="580" alt="Ambilight editor"></td>
+    <td valign="top"><img src="screenshots/en/ambi_edit_easy_en.png" width="580" alt="Ambilight editor, simple mode"></td>
+  </tr>
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><img src="screenshots/en/ambi_edit_advanced_en.png" width="580" alt="Ambilight editor, advanced mode"></td>
   </tr>
 </table>
 
