@@ -16,9 +16,10 @@ Known bugs, unfinished work and open questions. Updated for 1.2.2.
       `URLDownloadToFile` from `urlmon.dll` crashes with an access violation
       because COM is not initialised at that point (`external` declarations for a
       parameterless `OleInitialize` are rejected by the compiler).
-      Workaround in place: `vc_redist.x64.exe` is bundled again, which puts the
-      installer back to ~37.5 MB. A WinHTTP-based download would bring it to
-      ~20 MB.
+      Workaround in place: `vc_redist.x64.exe` is bundled again. The published
+      1.2.2 installer is 15.78 MB (CI build), a local one comes out at ~37.5 MB
+      because it also carries the `.pdb` for `crash.log`. A WinHTTP-based
+      download would cut roughly 7 MB off the published installer.
 - [ ] **`vc_redist.x64.exe` is never removed from an existing installation.**
       It survives upgrades in `C:\Program Files\Magic Home Controller` and cannot
       be deleted without elevation, so machines upgraded from 1.2.0 keep a stale
