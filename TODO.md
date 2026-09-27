@@ -24,12 +24,12 @@ Known bugs, unfinished work and open questions. Updated for 1.2.2.
       It survives upgrades in `C:\Program Files\Magic Home Controller` and cannot
       be deleted without elevation, so machines upgraded from 1.2.0 keep a stale
       copy even after the fix above.
-- [ ] **Build fails when the source path contains non-ASCII characters.**
-      The em dash in the project folder name (`elk_c++ — копия`) makes
-      `cmcldeps.exe` fail on `app.rc`, so the resource never compiles. The project
-      must be configured through the 8.3 short path (`ELK_C_~2`). Worth fixing in
-      `CMakeLists.txt` by referencing the icon relatively instead of by absolute
-      path.
+- [x] **Build failed when the source path contains non-ASCII characters.**
+      The em dash in the project folder name (`elk_c++ — копия`) made `rc.exe` cut
+      the icon path short, so `app.rc` never compiled and the build died on
+      `app.rc.res`. Fixed in two parts: the icon is copied next to `app.rc` and
+      referenced relatively, and both build scripts now put the build directory
+      under `%LOCALAPPDATA%` instead of inside the tree.
 
 ## Not finished
 
@@ -47,9 +47,14 @@ Known bugs, unfinished work and open questions. Updated for 1.2.2.
 - [ ] **Editor always opens in Simple mode.** Layer state and mode were restored
       on open at one point, then deliberately reverted. `modeTouched_` now only
       guards against losing layers. Remembering the last mode is still open.
-- [ ] **Translations are not regenerated for 1.2.2.** The removed update strings
-      are still in `magic_home_controller_ru.ts` / `_en.ts`, and the QSS-adjacent
-      label changes are not in the catalogues.
+- [x] **Translations are not regenerated for 1.2.2.** Re-ran `lupdate`/`lrelease`:
+      21 obsolete entries from the removed update check are gone, `Status:` was
+      added and translated, both catalogues report 287 finished and 0 unfinished.
+      Note that `lupdate` also breaks on the non-ASCII project path, so the
+      sources have to be staged through an ASCII directory (or the build moved,
+      see above) before running it.
+- [x] **Editor always opened in Simple mode.** `setSettings` now restores the
+      tab from `ambi_easy` instead of forcing index 0.
 - [ ] **README screenshots are from an older build.** They show the update check
       button that no longer exists.
 

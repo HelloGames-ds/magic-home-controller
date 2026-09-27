@@ -849,10 +849,11 @@ void AmbiEditor::setSettings(const QVariantMap& values)
     storedZones_ = values.value(QStringLiteral("ambi_zones")).toString();
     zones_ = decodeZones(storedZones_);
     activeLayer_ = zones_.isEmpty() ? -1 : 0;
-    // По умолчанию открывается простая вкладка: она и есть «обычный» режим.
-    // Переключаться на расширенную пользователь может сам, а режим, при котором
-    // действуют слои, задаётся переключателем.
-    if (modeTabs_) modeTabs_->setCurrentIndex(0);
+    // Открываем в том режиме, который был применён последним: возвращаться к
+    // простой вкладке каждый раз неудобно. Слои при этом не теряются — движок
+    // ориентируется на ambi_easy, а не на то, какая вкладка открыта.
+    const bool easy = values.value(QStringLiteral("ambi_easy"), true).toBool();
+    if (modeTabs_) modeTabs_->setCurrentIndex(easy ? 0 : 1);
     appliedSettings_ = values;
     updating_ = false;
     syncControls();

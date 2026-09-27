@@ -8,19 +8,25 @@ set "QT_ROOT=C:\Qt\6.8.3\msvc2022_64"
 
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64 || exit /b 1
 
-if exist build-release rmdir /s /q build-release
+rem Каталог сборки всегда вне дерева исходников. В имени папки проекта есть
+rem «—», и из-за него cmcldeps падает на app.rc: ресурс с версией не
+rem компилируется вовсе. Исходники передаются как есть — с ними компилятор
+rem справляется, ломается только обработка .rc.
+set "BUILD_DIR=%LOCALAPPDATA%\MagicHomeBuild\release"
+
+if exist "%BUILD_DIR%" rmdir /s /q "%BUILD_DIR%"
 if exist dist-cpp rmdir /s /q dist-cpp
 
-"%CMAKE%" -S . -B build-release -G Ninja ^
+"%CMAKE%" -S "%CD%" -B "%BUILD_DIR%" -G Ninja ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_PREFIX_PATH="%QT_ROOT%" ^
     -DCMAKE_MAKE_PROGRAM="%NINJA%" || exit /b 1
-"%CMAKE%" --build build-release --parallel || exit /b 1
+"%CMAKE%" --build "%BUILD_DIR%" --parallel || exit /b 1
 
 mkdir dist-cpp
-copy /y "build-release\Magic-Home-Controller.exe" "dist-cpp\Magic-Home-Controller.exe" >nul || exit /b 1
+copy /y "%BUILD_DIR%\Magic-Home-Controller.exe" "dist-cpp\Magic-Home-Controller.exe" >nul || exit /b 1
 rem .pdb нужен, чтобы crash.log содержал имена функций, а не адреса
-copy /y "build-release\Magic-Home-Controller.pdb" "dist-cpp\Magic-Home-Controller.pdb" >nul 2>&1
+copy /y "%BUILD_DIR%\Magic-Home-Controller.pdb" "dist-cpp\Magic-Home-Controller.pdb" >nul 2>&1
 "%QT_ROOT%\bin\windeployqt.exe" --release --no-translations --compiler-runtime "dist-cpp\Magic-Home-Controller.exe" || exit /b 1
 rem vc_redist.x64.exe оставляем в dist-cpp: установщик запускает его из {app}
 rem только если рантайма в системе нет (директива Check: NeedsVCRedist).

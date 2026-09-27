@@ -17,15 +17,19 @@ if not exist "%QT_ROOT%\bin\Qt6Widgets.dll" (
 
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64 || exit /b 1
 
-if exist build-cpp rmdir /s /q build-cpp
-"%CMAKE%" -S . -B build-cpp -G Ninja ^
+rem Каталог сборки вне дерева исходников: в имени папки проекта есть «—», и
+rem rc.exe обрывает на нём путь к иконке, из-за чего ресурс не собирается.
+set "BUILD_DIR=%LOCALAPPDATA%\MagicHomeBuild\debug"
+
+if exist "%BUILD_DIR%" rmdir /s /q "%BUILD_DIR%"
+"%CMAKE%" -S "%CD%" -B "%BUILD_DIR%" -G Ninja ^
     -DCMAKE_BUILD_TYPE=Debug ^
     -DCMAKE_PREFIX_PATH="%QT_ROOT%" ^
     -DCMAKE_MAKE_PROGRAM="%NINJA%" || exit /b 1
 
-"%CMAKE%" --build build-cpp --parallel || exit /b 1
+"%CMAKE%" --build "%BUILD_DIR%" --parallel || exit /b 1
 
-"%QT_ROOT%\bin\windeployqt.exe" --debug --no-translations --compiler-runtime "build-cpp\Magic-Home-Controller.exe" || exit /b 1
+"%QT_ROOT%\bin\windeployqt.exe" --debug --no-translations --compiler-runtime "%BUILD_DIR%\Magic-Home-Controller.exe" || exit /b 1
 
-echo Debug package: %CD%\build-cpp\Magic-Home-Controller.exe
+echo Debug package: %BUILD_DIR%\Magic-Home-Controller.exe
 endlocal

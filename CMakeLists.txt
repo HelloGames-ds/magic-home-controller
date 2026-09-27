@@ -32,7 +32,10 @@ qt_standard_project_setup()
 # захардкоженную версию и Windows не знает, что установлена новая сборка.
 # Объявление должно идти до qt_add_executable: список источников вычисляется
 # сразу, и пустая переменная молча убрала бы ресурс из сборки.
-set(APP_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/icon.ico")
+# Иконку копируем рядом с app.rc и ссылаемся относительным путём: rc.exe не
+# понимает не-ASCII в пути и обрывает путь на «—» в имени папки проекта.
+configure_file(icon.ico "${CMAKE_CURRENT_BINARY_DIR}/icon.ico" COPYONLY)
+set(APP_ICON_PATH "icon.ico")
 set(APP_VERSION_RESOURCE "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
 configure_file(app.rc.in "${APP_VERSION_RESOURCE}" @ONLY)
 
