@@ -32,6 +32,15 @@ jobs:
           New-Item -ItemType Directory -Force package | Out-Null
           Copy-Item build/Release/Magic-Home-Controller.exe package/Magic-Home-Controller.exe
           windeployqt --release --no-translations --compiler-runtime package/Magic-Home-Controller.exe
+          # Переводы Qt нужны для русских системных диалогов (открыть файл и
+          # подобные). --no-translations пропускает их, поэтому кладём qtbase_ru
+          # явно: так установщик весит столько же, сколько локальная сборка.
+          $qtTranslations = (qmake -query QT_INSTALL_TRANSLATIONS).Trim()
+          if (-not $qtTranslations -or -not (Test-Path "$qtTranslations/qtbase_ru.qm")) {
+            throw "qtbase_ru.qm not found (QT_INSTALL_TRANSLATIONS='$qtTranslations')"
+          }
+          New-Item -ItemType Directory -Force package/translations | Out-Null
+          Copy-Item "$qtTranslations/qtbase_ru.qm" package/translations/qtbase_ru.qm
 
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
