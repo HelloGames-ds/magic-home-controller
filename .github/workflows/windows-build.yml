@@ -117,11 +117,18 @@ jobs:
       - name: Show verification summary
         if: always()
         shell: pwsh
+        env:
+          # gh работает с API только с токеном: без него шаг падал уже после
+          # успешного создания релиза и ронял весь job впустую.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $exe = Get-ChildItem installer-output/*.exe | Select-Object -First 1
           if (-not $exe) { Write-Host "No installer to summarise"; exit 0 }
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe.FullName).Hash.ToLower()
           Write-Host "Installer: $($exe.Name)"
           Write-Host "SHA256:    $hash"
-          $att = gh attestation verify $exe.FullName --repo $env:GITHUB_REPOSITORY 2>&1
-          Write-Host $att
+          # Проверка информационная: релиз уже создан, и её неудача не должна
+          # помечать успешный выпуск как упавший.
+          gh attestation verify $exe.FullName --repo $env:GITHUB_REPOSITORY 2>&1 |
+            Out-String | Write-Host
+          exit 0
