@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(MagicHomeController
-    VERSION 1.2.2
+    VERSION 1.2.3
     DESCRIPTION "Magic Home LED Controller"
     LANGUAGES CXX
 )
