@@ -32,6 +32,8 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
+; vc_redist.x64.exe намеренно не упаковываем: рантайм Visual C++ ставится
+; через NeedsVCRedist ниже, если его нет в системе.
 Source: "dist-cpp\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
@@ -48,9 +50,20 @@ begin
   Result := IsAdminInstallMode;
 end;
 
+// Visual C++ 2015-2022 Redistributable нужен программе для запуска. Он лежит в
+// пакете установщика, но ставится только если рантайма в системе ещё нет.
+function NeedsVCRedist: Boolean;
+var
+  Installed: String;
+begin
+  Result := not RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
+    'Installed', Installed);
+end;
+
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Magic Home Controller"; ValueData: """{app}\Magic-Home-Controller.exe"" --minimized"; Tasks: autostart; Check: not IsAdminInstallModeSelected; Flags: uninsdeletevalue
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Magic Home Controller"; ValueData: """{app}\Magic-Home-Controller.exe"" --minimized"; Tasks: autostart; Check: IsAdminInstallModeSelected; Flags: uninsdeletevalue
 
 [Run]
 Filename: "{app}\Magic-Home-Controller.exe"; Description: "Запустить Magic Home Controller"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; Check: NeedsVCRedist and FileExists(ExpandConstant('{app}\vc_redist.x64.exe')); StatusMsg: "Устанавливается Visual C++ Runtime..."; Flags: waituntilterminated

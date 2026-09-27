@@ -33,7 +33,6 @@ class LogWindow;
 class SettingsStore;
 class SystemSessionFilter;
 class TrayPopup;
-class UpdateChecker;
 class WifiManager;
 
 class MainWindow final : public QMainWindow
@@ -83,9 +82,6 @@ private:
     void refreshTrayIcon(bool force = false);
     void quitApplication();
     void openLogWindow();
-    void setupUpdater();
-    void showUpdateAvailable(const QString& version, const QUrl& pageUrl, const QString& notes);
-    void installUpdate(const QString& installerPath, const QString& version);
 
     SettingsStore* store_ = nullptr;
     WifiManager* wifi_ = nullptr;
@@ -97,7 +93,6 @@ private:
     LogWindow* logWindow_ = nullptr;
     AmbiEditor* ambiEditor_ = nullptr;
     SystemSessionFilter* sessionFilter_ = nullptr;
-    UpdateChecker* updater_ = nullptr;
     AppSettings settings_;
 
     QTabWidget* tabs_ = nullptr;
@@ -160,9 +155,6 @@ private:
     QCheckBox* powerOffOnLockCheck_ = nullptr;
     bool restoreAfterSession_ = false;
     QAction* powerOffOnShutdownAction_ = nullptr;
-    QCheckBox* checkUpdatesCheck_ = nullptr;
-    QPushButton* checkUpdatesButton_ = nullptr;
-    QProgressBar* updateProgress_ = nullptr;
     QLabel* versionLabel_ = nullptr;
     QComboBox* languageCombo_ = nullptr;
 

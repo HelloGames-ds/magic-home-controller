@@ -49,11 +49,11 @@ QPushButton[danger="true"]:hover { background-color: #b3234a; border-color: #d63
 QPushButton[slot="true"] { border: 2px dashed #3a3a48; border-radius: 10px; padding: 0; }
 QPushButton[slot="true"]:hover { border-color: #b070ff; }
 QPushButton[slotActive="true"] { border: 3px solid #b070ff; border-radius: 10px; padding: 0; }
-QSlider::groove:horizontal { background: #2b2b35; height: 8px; border-radius: 4px; }
-QSlider::sub-page:horizontal { background: #7b2cbf; border-radius: 4px; }
+QSlider::groove:horizontal { background: #2b2b35; height: 6px; border-radius: 3px; }
+QSlider::sub-page:horizontal { background: #7b2cbf; border-radius: 3px; }
 QSlider::handle:horizontal {
     background: #e0e0e6; border: 2px solid #7b2cbf;
-    width: 16px; margin: -6px 0; border-radius: 10px;
+    width: 13px; margin: -5px 0; border-radius: 8px;
 }
 QSlider::handle:horizontal:hover { background: #9d4edd; border-color: #b070ff; }
 QLineEdit {
@@ -88,8 +88,8 @@ QListWidget::item:hover:!selected { background-color: #2a2a34; }
 QLabel[role="title"] { font-size: 20px; font-weight: 800; color: #ffffff; }
 QLabel[role="paneltitle"] { font-size: 17px; font-weight: 700; color: #ffffff; }
 QLabel[role="section"] {
-    color: #b070ff; font-weight: 700; font-size: 12px;
-    letter-spacing: 1px; padding: 6px 0 2px 0;
+    color: #b070ff; font-weight: 700; font-size: 11px;
+    letter-spacing: 1px; padding: 3px 0 1px 0;
 }
 QLabel[role="warn"] {
     color: #f59e0b; background: #2a2318; border: 1px solid #7a5a20;

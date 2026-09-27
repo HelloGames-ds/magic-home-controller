@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(MagicHomeController
-    VERSION 1.2.1
+    VERSION 1.2.2
     DESCRIPTION "Magic Home LED Controller"
     LANGUAGES CXX
 )
@@ -44,8 +44,6 @@ qt_add_executable(MagicHomeController WIN32
     src/MainWindow.h
     src/SystemSessionFilter.cpp
     src/SystemSessionFilter.h
-    src/UpdateChecker.cpp
-    src/UpdateChecker.h
     src/WifiWorker.cpp
     src/WifiWorker.h
     src/ColorWheel.cpp
