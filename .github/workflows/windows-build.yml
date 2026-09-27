@@ -69,6 +69,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Нужен именно здесь: `gh release create --generate-notes` собирает
+      # заметки из истории git, а без checkout репозитория падал с
+      # "failed to run git: not a git repository".
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download installer
         uses: actions/download-artifact@v4
         with:
